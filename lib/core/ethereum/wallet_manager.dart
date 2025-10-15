@@ -1,210 +1,107 @@
-import 'dart:math';
-import 'dart:convert';
 import 'package:web3dart/web3dart.dart';
-import 'package:bip39/bip39.dart' as bip39;
-import 'package:bip32/bip32.dart' as bip32;
-import 'package:encrypt/encrypt.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart';
+import 'package:tyd_chronos_wallet_new/core/security/wallet_secure_storage.dart';
 
-class EthereumWalletManager {
-  static final EthereumWalletManager _instance = EthereumWalletManager._internal();
-  factory EthereumWalletManager() => _instance;
-  EthereumWalletManager._internal();
+class WalletManager {
+  final WalletSecureStorage _secureStorage = WalletSecureStorage();
+  late Web3Client _web3client;
+  Credentials? _credentials;
+  EthereumAddress? _address;
+  
+  final Map<String, String> _networkRpcs = {
+    'Ethereum Mainnet': 'https://eth.llamarpc.com',
+    'Goerli Testnet': 'https://eth-goerli.public.blastapi.io',
+    'Sepolia Testnet': 'https://rpc2.sepolia.org',
+    'Polygon Mainnet': 'https://polygon-rpc.com',
+    'Polygon Mumbai': 'https://rpc-mumbai.matic.today',
+    'Arbitrum One': 'https://arb1.arbitrum.io/rpc',
+    'Optimism': 'https://mainnet.optimism.io',
+    'Avalanche C-Chain': 'https://api.avax.network/ext/bc/C/rpc',
+    'zkSync Era': 'https://mainnet.era.zksync.io',
+  };
 
-  EthPrivateKey? _privateKey;
-  String? _mnemonic;
-  String? _encryptedPrivateKey;
-
-  // Generate new wallet with mnemonic
-  Future<Map<String, String>> generateNewWallet() async {
-    // Generate mnemonic
-    _mnemonic = bip39.generateMnemonic();
-    
-    // Generate seed from mnemonic
-    final seed = bip39.mnemonicToSeed(_mnemonic!);
-    
-    // Generate BIP32 root key
-    final root = bip32.BIP32.fromSeed(seed);
-    
-    // Generate Ethereum path: m/44'/60'/0'/0/0
-    final child = root.derivePath("m/44'/60'/0'/0/0");
-    
-    // Create Ethereum private key
-    _privateKey = EthPrivateKey.fromHex(bytesToHex(child.privateKey!));
-    
-    // Get address
-    final address = await _privateKey!.extractAddress();
-    
-    // Encrypt and store private key
-    await _encryptAndStorePrivateKey();
-    
-    return {
-      'address': address.hex,
-      'privateKey': bytesToHex(child.privateKey!),
-      'mnemonic': _mnemonic!,
-    };
+  WalletManager() {
+    _initializeClient('Ethereum Mainnet');
   }
 
-  // Import wallet from private key
-  Future<String> importFromPrivateKey(String privateKey) async {
+  void _initializeClient(String network) {
+    final rpcUrl = _networkRpcs[network] ?? _networkRpcs['Ethereum Mainnet']!;
+    print('Connecting to: $network - $rpcUrl');
+    _web3client = Web3Client(rpcUrl, Client());
+  }
+
+  Future<String?> getWalletAddress() async {
+    if (_address != null) return _address!.hex;
+    
+    final mnemonic = await _secureStorage.getMnemonic();
+    if (mnemonic != null) {
+      await _loadWalletFromMnemonic(mnemonic);
+      return _address!.hex;
+    }
+    
+    await generateNewWallet();
+    return _address!.hex;
+  }
+
+  Future<void> generateNewWallet() async {
     try {
-      _privateKey = EthPrivateKey.fromHex(privateKey);
-      final address = await _privateKey!.extractAddress();
-      await _encryptAndStorePrivateKey();
-      return address.hex;
+      final mnemonic = await _secureStorage.generateMnemonic();
+      await _loadWalletFromMnemonic(mnemonic);
+      await _secureStorage.saveMnemonic(mnemonic);
+      await _secureStorage.savePrivateKey(_credentials!.privateKey);
+      print('✅ New wallet generated with address: ${_address!.hex}');
+      print('📝 Mnemonic: $mnemonic');
     } catch (e) {
-      throw Exception('Invalid private key: $e');
+      throw Exception('Failed to generate wallet: $e');
     }
   }
 
-  // Import wallet from mnemonic
-  Future<String> importFromMnemonic(String mnemonic) async {
+  Future<void> _loadWalletFromMnemonic(String mnemonic) async {
     try {
-      _mnemonic = mnemonic;
-      final seed = bip39.mnemonicToSeed(mnemonic);
-      final root = bip32.BIP32.fromSeed(seed);
-      final child = root.derivePath("m/44'/60'/0'/0/0");
-      _privateKey = EthPrivateKey.fromHex(bytesToHex(child.privateKey!));
-      final address = await _privateKey!.extractAddress();
-      await _encryptAndStorePrivateKey();
-      return address.hex;
+      final seed = await _secureStorage.mnemonicToSeed(mnemonic);
+      final privateKeyHex = await _secureStorage.derivePrivateKey(seed);
+      
+      // For web3dart 2.7.3, use EthPrivateKey.fromHex
+      _credentials = EthPrivateKey.fromHex(privateKeyHex);
+      _address = await _credentials!.extractAddress();
     } catch (e) {
-      throw Exception('Invalid mnemonic: $e');
+      throw Exception('Failed to load wallet from mnemonic: $e');
     }
   }
 
-  // Get current address
-  Future<String?> getCurrentAddress() async {
-    if (_privateKey == null) {
-      await _loadStoredWallet();
-    }
-    return _privateKey != null ? (await _privateKey!.extractAddress()).hex : null;
-  }
+  Future<double> getBalance(String network) async {
+    try {
+      _initializeClient(network);
 
-  // Sign transaction
-  Future<String> signTransaction({
-    required String to,
-    required BigInt amount,
-    required BigInt gasPrice,
-    required BigInt gasLimit,
-    required int nonce,
-  }) async {
-    if (_privateKey == null) {
-      await _loadStoredWallet();
-      if (_privateKey == null) throw Exception('No wallet loaded');
-    }
+      if (_address == null) {
+        await getWalletAddress();
+      }
 
-    final transaction = Transaction(
-      to: EthereumAddress.fromHex(to),
-      value: amount,
-      gasPrice: gasPrice,
-      gasLimit: gasLimit,
-      nonce: nonce,
-    );
-
-    final signature = await _privateKey!.signTransaction(transaction);
-    return signature;
-  }
-
-  // Sign message
-  Future<MsgSignature> signMessage(String message) async {
-    if (_privateKey == null) {
-      await _loadStoredWallet();
-      if (_privateKey == null) throw Exception('No wallet loaded');
-    }
-
-    final messageBytes = utf8.encode(message);
-    return await _privateKey!.signPersonalMessage(messageBytes);
-  }
-
-  // Sign smart contract transaction
-  Future<String> signContractTransaction({
-    required DeployableContract contract,
-    required String functionName,
-    required List<dynamic> parameters,
-    required BigInt gasPrice,
-    required BigInt gasLimit,
-    required int nonce,
-  }) async {
-    if (_privateKey == null) {
-      await _loadStoredWallet();
-      if (_privateKey == null) throw Exception('No wallet loaded');
-    }
-
-    final function = contract.function(functionName);
-    final call = ContractCall(contract, function, parameters);
-    
-    final transaction = Transaction.callContract(
-      contract: contract,
-      function: function,
-      parameters: parameters,
-      gasPrice: gasPrice,
-      gasLimit: gasLimit,
-      nonce: nonce,
-    );
-
-    final signature = await _privateKey!.signTransaction(transaction);
-    return signature;
-  }
-
-  // Private method to encrypt and store private key
-  Future<void> _encryptAndStorePrivateKey() async {
-    if (_privateKey == null) return;
-
-    final prefs = await SharedPreferences.getInstance();
-    final key = Key.fromSecureRandom(32);
-    final iv = IV.fromSecureRandom(16);
-    final encrypter = Encrypter(AES(key));
-
-    final privateKeyHex = _privateKey!.privateKey.toString();
-    _encryptedPrivateKey = encrypter.encrypt(privateKeyHex, iv: iv).base64;
-
-    await prefs.setString('encrypted_private_key', _encryptedPrivateKey!);
-    await prefs.setString('encryption_key', key.base64);
-    await prefs.setString('encryption_iv', iv.base64);
-    
-    if (_mnemonic != null) {
-      await prefs.setString('mnemonic', _mnemonic!);
+      if (_address != null) {
+        print('🔄 Fetching balance for ${_address!.hex} on $network...');
+        final balance = await _web3client.getBalance(_address!);
+        final etherBalance = balance.getInWei.toDouble() / 1000000000000000000; // Convert from wei to ETH
+        print('✅ Balance on $network: $etherBalance ETH');
+        return etherBalance;
+      }
+      
+      return 0.0;
+    } catch (e) {
+      print('❌ Error getting balance from $network: $e');
+      return 0.0;
     }
   }
 
-  // Private method to load stored wallet
-  Future<void> _loadStoredWallet() async {
-    final prefs = await SharedPreferences.getInstance();
-    final encryptedKey = prefs.getString('encrypted_private_key');
-    final keyBase64 = prefs.getString('encryption_key');
-    final ivBase64 = prefs.getString('encryption_iv');
-    _mnemonic = prefs.getString('mnemonic');
-
-    if (encryptedKey != null && keyBase64 != null && ivBase64 != null) {
-      final key = Key.fromBase64(keyBase64);
-      final iv = IV.fromBase64(ivBase64);
-      final encrypter = Encrypter(AES(key));
-
-      final decrypted = encrypter.decrypt64(encryptedKey, iv: iv);
-      _privateKey = EthPrivateKey.fromHex(decrypted);
-    }
+  List<String> getAvailableNetworks() {
+    return _networkRpcs.keys.toList();
   }
 
-  // Check if wallet exists
-  Future<bool> walletExists() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.containsKey('encrypted_private_key');
+  Future<String?> getMnemonic() async {
+    return await _secureStorage.getMnemonic();
   }
 
-  // Clear wallet (logout)
-  Future<void> clearWallet() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('encrypted_private_key');
-    await prefs.remove('encryption_key');
-    await prefs.remove('encryption_iv');
-    await prefs.remove('mnemonic');
-    _privateKey = null;
-    _mnemonic = null;
-    _encryptedPrivateKey = null;
-  }
-
-  String bytesToHex(List<int> bytes) {
-    return '0x${bytes.map((byte) => byte.toRadixString(16).padLeft(2, '0')).join('')}';
+  Future<bool> isWalletInitialized() async {
+    final mnemonic = await _secureStorage.getMnemonic();
+    return mnemonic != null;
   }
 }

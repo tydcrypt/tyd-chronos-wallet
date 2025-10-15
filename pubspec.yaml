@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  cupertino_icons: ^1.0.2
   http: ^1.1.0
   shared_preferences: ^2.3.2
   web3dart: ^2.7.3
@@ -17,10 +18,12 @@ dependencies:
   bip39: ^1.0.6
   bip32: ^2.0.0
   encrypt: ^5.0.3
+  flutter_secure_storage: ^8.0.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_lints: ^3.0.0
 
 flutter:
   uses-material-design: true
