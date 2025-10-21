@@ -1,9 +1,9 @@
 [build]
   publish = "build/web"
-  command = "flutter build web --release"
+  command = "./build.sh"
 
 [build.environment]
-  FLUTTER_VERSION = "3.22.0"
+  NODE_VERSION = "18"
 
 [[redirects]]
   from = "/*"
