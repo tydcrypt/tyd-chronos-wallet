@@ -3,7 +3,7 @@
   command = "flutter build web --release"
 
 [build.environment]
-  FLUTTER_ROOT = "/opt/buildhome/.flutter"
+  FLUTTER_VERSION = "3.22.0"
 
 [[redirects]]
   from = "/*"
