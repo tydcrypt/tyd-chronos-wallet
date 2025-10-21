@@ -1,10 +1,290 @@
-import 'package:flutter/material.dart';
+mport 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'dart:async';
 import 'package:bip39/bip39.dart' as bip39;
 import 'services/ethereum_service.dart';
+import 'services/currency_service.dart';
+import 'services/price_feed_service.dart';
+import 'services/transaction_service.dart';
+import 'services/backend_api_service.dart';
+import 'services/security_service.dart';
+import 'services/snipping_bot_service.dart';
 
+// ==================== NETWORK MODE MANAGER ====================
+class NetworkModeManager extends ChangeNotifier {
+  bool _isTestnetMode = true;
+  final PriceFeedService _priceService = PriceFeedService();
+  Map<String, double> _livePrices = {};
+  Map<String, double> _lockedValues = {}; // For volatility protection
+  
+  bool get isTestnetMode => _isTestnetMode;
+  String get currentNetwork => _isTestnetMode ? 'Testnet' : 'Mainnet';
+  String get currentNetworkSubtitle => _isTestnetMode ? 'Using test funds' : 'Real funds mode';
+  
+  Map<String, double> get livePrices => _livePrices;
+  Map<String, double> get lockedValues => _lockedValues;
+  
+  void toggleNetworkMode() {
+    _isTestnetMode = !_isTestnetMode;
+    notifyListeners();
+  }
+  
+  double getAdjustedBalance(double mainnetBalance) {
+    return _isTestnetMode ? 0.0 : mainnetBalance;
+  }
+  
+  String getNetworkAdjustedBalance(double mainnetBalance, {String symbol = '\$'}) {
+    final balance = getAdjustedBalance(mainnetBalance);
+    return balance > 0 ? '$symbol${balance.toStringAsFixed(2)}' : '••••••';
+  }
+  
+  // Volatility protection - lock values during transactions
+  void lockValue(String txHash, double value, String symbol) {
+    _lockedValues['${txHash}_$symbol'] = value;
+    notifyListeners();
+  }
+  
+  void unlockValue(String txHash, String symbol) {
+    _lockedValues.remove('${txHash}_$symbol');
+    notifyListeners();
+  }
+  
+  double getLockedValue(String txHash, String symbol) {
+    return _lockedValues['${txHash}_$symbol'] ?? 0.0;
+  }
+  
+  Future<void> fetchLivePrices() async {
+    try {
+      _livePrices = await _priceService.getLivePrices();
+      notifyListeners();
+    } catch (e) {
+      print('Error fetching live prices: $e');
+    }
+  }
+  
+  double getLivePrice(String symbol) {
+    return _livePrices[symbol] ?? 0.0;
+  }
+}
+
+// ==================== TYDCHRONOS ECOSYSTEM SERVICE ====================
+class TydChronosEcosystemService extends ChangeNotifier {
+  String? _ethereumAddress;
+  final BackendApiService _backendService = BackendApiService();
+  final SecurityService _securityService = SecurityService();
+  final SnippingBotService _snippingBotService = SnippingBotService();
+  
+  // Bot status
+  bool _arbitrageBotActive = false;
+  bool _liquidityBotActive = false;
+  bool _marketMakingBotActive = false;
+  
+  String? get ethereumAddress => _ethereumAddress;
+  bool get arbitrageBotActive => _arbitrageBotActive;
+  bool get liquidityBotActive => _liquidityBotActive;
+  bool get marketMakingBotActive => _marketMakingBotActive;
+  
+  Future<void> initialize() async {
+    print('[TydChronos] Ecosystem Service initialized');
+    await _securityService.initialize();
+    
+    // Generate or retrieve Ethereum address
+    final ethService = EthereumService();
+    _ethereumAddress = await ethService.getAddress();
+    if (_ethereumAddress == null) {
+      final mnemonic = bip39.generateMnemonic();
+      await ethService.createWalletFromMnemonic(mnemonic);
+      _ethereumAddress = await ethService.getAddress();
+      await _backendService.registerWallet(_ethereumAddress!);
+    }
+    
+    // Sync with TydChronos backend
+    await _backendService.syncWalletData(_ethereumAddress!);
+    
+    // Initialize snipping bots
+    await _snippingBotService.initialize(_ethereumAddress!);
+  }
+  
+  // ==================== SNIPPING BOT MANAGEMENT ====================
+  
+  Future<Map<String, dynamic>> activateArbitrageBot() async {
+    try {
+      await _securityService.requireTransactionPin();
+      final result = await _snippingBotService.activateArbitrageBot();
+      _arbitrageBotActive = true;
+      notifyListeners();
+      return result;
+    } catch (e) {
+      throw Exception('Failed to activate arbitrage bot: $e');
+    }
+  }
+  
+  Future<Map<String, dynamic>> activateLiquidityBot() async {
+    try {
+      await _securityService.requireTransactionPin();
+      final result = await _snippingBotService.activateLiquidityBot();
+      _liquidityBotActive = true;
+      notifyListeners();
+      return result;
+    } catch (e) {
+      throw Exception('Failed to activate liquidity bot: $e');
+    }
+  }
+  
+  Future<Map<String, dynamic>> activateMarketMakingBot() async {
+    try {
+      await _securityService.requireTransactionPin();
+      final result = await _snippingBotService.activateMarketMakingBot();
+      _marketMakingBotActive = true;
+      notifyListeners();
+      return result;
+    } catch (e) {
+      throw Exception('Failed to activate market making bot: $e');
+    }
+  }
+  
+  Future<void> deactivateAllBots() async {
+    await _snippingBotService.deactivateAllBots();
+    _arbitrageBotActive = false;
+    _liquidityBotActive = false;
+    _marketMakingBotActive = false;
+    notifyListeners();
+  }
+  
+  Future<Map<String, dynamic>> getBotPerformance() async {
+    return await _snippingBotService.getBotPerformance();
+  }
+  
+  // ==================== TYDCHRONOS DAPP INTEGRATION ====================
+  
+  Future<void> connectToTydChronosDApp() async {
+    print('[TydChronos] Connecting to TydChronos DApp...');
+    await _securityService.requireBiometricAuth();
+    
+    // Simulate DApp connection
+    await Future.delayed(const Duration(seconds: 2));
+    
+    await _backendService.logDAppConnection(_ethereumAddress!);
+    print('[TydChronos] Connected to TydChronos DApp');
+  }
+  
+  Future<Map<String, dynamic>> executeTydChronosTransaction({
+    required String toAddress,
+    required double amount,
+    required String symbol,
+    bool enableVolatilityProtection = true,
+    required BuildContext context,
+  }) async {
+    await _securityService.requireTransactionPin();
+    
+    try {
+      final networkMode = Provider.of<NetworkModeManager>(context, listen: false);
+      String? lockedTxHash;
+      
+      // Enable volatility protection by locking value
+      if (enableVolatilityProtection) {
+        lockedTxHash = 'tx_${DateTime.now().millisecondsSinceEpoch}';
+        networkMode.lockValue(lockedTxHash, amount, symbol);
+      }
+      
+      final result = await TransactionService().executeTydChronosTransaction(
+        fromAddress: _ethereumAddress!,
+        toAddress: toAddress,
+        amount: amount,
+        symbol: symbol,
+        enableVolatilityProtection: enableVolatilityProtection,
+      );
+      
+      // Unlock value after transaction confirmation
+      if (enableVolatilityProtection && lockedTxHash != null) {
+        networkMode.unlockValue(lockedTxHash, symbol);
+      }
+      
+      await _backendService.recordTransaction(result);
+      notifyListeners();
+      return result;
+    } catch (e) {
+      throw Exception('TydChronos transaction failed: $e');
+    }
+  }
+  
+  Map<String, dynamic> getEcosystemInfo() {
+    return {
+      'walletAddress': _ethereumAddress,
+      'arbitrageBotActive': _arbitrageBotActive,
+      'liquidityBotActive': _liquidityBotActive,
+      'marketMakingBotActive': _marketMakingBotActive,
+      'connectedToDApp': true,
+    };
+  }
+}
+
+// ==================== TYDCHRONOS ECOSYSTEM BUTTON ====================
+class TydChronosEcosystemButton extends StatelessWidget {
+  const TydChronosEcosystemButton({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<TydChronosEcosystemService>(
+      builder: (context, ecosystem, child) {
+        return IconButton(
+          icon: const Icon(
+            Icons.account_balance_wallet,
+            color: Color(0xFFD4AF37),
+          ),
+          onPressed: () => _showTydChronosDialog(context, ecosystem),
+          tooltip: 'TydChronos Ecosystem',
+        );
+      },
+    );
+  }
+
+  void _showTydChronosDialog(BuildContext context, TydChronosEcosystemService ecosystem) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          'TydChronos Ecosystem',
+          style: TextStyle(color: Color(0xFFD4AF37)),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.account_balance_wallet, color: Color(0xFFD4AF37), size: 50),
+            const SizedBox(height: 16),
+            const Text('TydChronos Wallet & DApp Integration', 
+                     style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                ecosystem.connectToTydChronosDApp();
+                Navigator.pop(context);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD4AF37),
+                foregroundColor: Colors.black,
+              ),
+              child: const Text('Connect to TydChronos DApp'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== MAIN APP ====================
 void main() {
-  runApp(const TydChronosWalletApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => TydChronosEcosystemService()..initialize()),
+        ChangeNotifierProvider(create: (context) => NetworkModeManager()),
+      ],
+      child: const TydChronosWalletApp(),
+    ),
+  );
 }
 
 class TydChronosWalletApp extends StatelessWidget {
@@ -13,7 +293,7 @@ class TydChronosWalletApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TydChronos',
+      title: 'TydChronos Wallet',
       theme: _buildBlackGoldTheme(),
       home: const SplashScreen(),
       debugShowCheckedModeBanner: false,
@@ -48,7 +328,6 @@ class TydChronosWalletApp extends StatelessWidget {
 }
 
 // ==================== BALANCE VISIBILITY MANAGER ====================
-
 class BalanceVisibilityManager extends ChangeNotifier {
   bool _balancesVisible = true;
 
@@ -61,9 +340,9 @@ class BalanceVisibilityManager extends ChangeNotifier {
 
   String formatBalance(double amount, {String symbol = '\$', int decimalPlaces = 2}) {
     if (!_balancesVisible) {
-      return '${symbol}••••••';
+      return '$symbol••••••';
     }
-    return '${symbol}${amount.toStringAsFixed(decimalPlaces)}';
+    return '$symbol${amount.toStringAsFixed(decimalPlaces)}';
   }
 
   String formatCryptoBalance(double amount, {int decimalPlaces = 4}) {
@@ -73,8 +352,6 @@ class BalanceVisibilityManager extends ChangeNotifier {
     return amount.toStringAsFixed(decimalPlaces);
   }
 }
-
-// ==================== SIMPLE PROVIDER IMPLEMENTATION ====================
 
 class BalanceProvider extends InheritedWidget {
   final BalanceVisibilityManager balanceManager;
@@ -115,7 +392,6 @@ class BalanceConsumer extends StatelessWidget {
 }
 
 // ==================== SPLASH SCREEN ====================
-
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -127,7 +403,14 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 10), () {
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    final networkMode = Provider.of<NetworkModeManager>(context, listen: false);
+    await networkMode.fetchLivePrices();
+    
+    Timer(const Duration(seconds: 3), () {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const TydChronosHomePage()),
@@ -151,7 +434,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 20),
             const Text(
-              'TydChronos',
+              'TydChronos Wallet',
               style: TextStyle(
                 color: Color(0xFFD4AF37),
                 fontSize: 28,
@@ -169,7 +452,7 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Loading secure wallet services...',
+              'Loading TydChronos Ecosystem...',
               style: TextStyle(
                 color: Colors.grey,
                 fontSize: 12,
@@ -201,6 +484,7 @@ class _SplashScreenState extends State<SplashScreen> {
         height: size,
         fit: BoxFit.contain,
         errorBuilder: (context, error, stackTrace) {
+          print('Error loading logo: $error');
           return _buildPlaceholderLogo(size);
         },
       ),
@@ -211,9 +495,17 @@ class _SplashScreenState extends State<SplashScreen> {
     return Container(
       width: size,
       height: size,
-      decoration: const BoxDecoration(
-        color: Color(0xFFD4AF37),
-        shape: BoxShape.circle,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFD4AF37),
+            Color(0xFFFFD700),
+            Color(0xFFD4AF37),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(size / 2),
       ),
       child: Center(
         child: Icon(
@@ -226,8 +518,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 }
 
-// ==================== ENHANCED MODELS ====================
-
+// ==================== DATA MODELS ====================
 class FiatWallet {
   double balance = 12500.0;
   String selectedCurrency = 'USD';
@@ -365,8 +656,7 @@ class TradingPair {
   });
 }
 
-// ==================== MAIN APP WITH BALANCE TOGGLE ====================
-
+// ==================== MAIN HOME PAGE ====================
 class TydChronosHomePage extends StatefulWidget {
   const TydChronosHomePage({super.key});
 
@@ -383,85 +673,118 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return BalanceProvider(
-      balanceManager: _balanceManager,
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        appBar: AppBar(
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider.value(value: _balanceManager),
+      ],
+      child: BalanceProvider(
+        balanceManager: _balanceManager,
+        child: Scaffold(
           backgroundColor: Colors.black,
-          elevation: 0,
-          leading: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: _buildLogo(35),
-          ),
-          title: const Text(
-            'TydChronos',
-            style: TextStyle(
-              color: Color(0xFFD4AF37),
-              fontWeight: FontWeight.bold,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            elevation: 0,
+            leading: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: _buildLogo(35),
             ),
-          ),
-          actions: [
-            // Balance Toggle Button
-            Builder(
-              builder: (context) {
-                final balanceManager = BalanceProvider.of(context);
-                return IconButton(
-                  icon: Icon(
-                    balanceManager.balancesVisible ? Icons.visibility : Icons.visibility_off,
-                    color: const Color(0xFFD4AF37),
-                  ),
-                  onPressed: () {
-                    balanceManager.toggleBalances();
-                  },
-                  tooltip: balanceManager.balancesVisible ? 'Hide Balances' : 'Show Balances',
-                );
-              },
+            title: const Text(
+              'TydChronos Wallet',
+              style: TextStyle(
+                color: Color(0xFFD4AF37),
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ],
-        ),
-        body: _getCurrentScreen(),
-        bottomNavigationBar: BottomNavigationBar(
-          backgroundColor: Colors.black,
-          selectedItemColor: const Color(0xFFD4AF37),
-          unselectedItemColor: Colors.grey[600],
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          type: BottomNavigationBarType.fixed,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'OVERVIEW'),
-            BottomNavigationBarItem(icon: Icon(Icons.currency_bitcoin), label: 'CRYPTO'),
-            BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'E-WALLET'),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'SETTINGS'),
-          ],
+            actions: [
+              Consumer<NetworkModeManager>(
+                builder: (context, networkMode, child) {
+                  return IconButton(
+                    icon: Icon(
+                      networkMode.isTestnetMode ? Icons.security : Icons.attach_money,
+                      color: networkMode.isTestnetMode ? Colors.orange : Colors.green,
+                    ),
+                    onPressed: () {
+                      networkMode.toggleNetworkMode();
+                    },
+                    tooltip: 'Switch to ${networkMode.isTestnetMode ? 'Mainnet' : 'Testnet'}',
+                  );
+                },
+              ),
+              const TydChronosEcosystemButton(),
+              Builder(
+                builder: (context) {
+                  final balanceManager = BalanceProvider.of(context);
+                  return IconButton(
+                    icon: Icon(
+                      balanceManager.balancesVisible ? Icons.visibility : Icons.visibility_off,
+                      color: const Color(0xFFD4AF37),
+                    ),
+                    onPressed: () {
+                      balanceManager.toggleBalances();
+                    },
+                    tooltip: balanceManager.balancesVisible ? 'Hide Balances' : 'Show Balances',
+                  );
+                },
+              ),
+            ],
+          ),
+          body: _getCurrentScreen(),
+          bottomNavigationBar: BottomNavigationBar(
+            backgroundColor: Colors.black,
+            selectedItemColor: const Color(0xFFD4AF37),
+            unselectedItemColor: Colors.grey.shade600,
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            type: BottomNavigationBarType.fixed,
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'OVERVIEW'),
+              BottomNavigationBarItem(icon: Icon(Icons.currency_bitcoin), label: 'CRYPTO'),
+              BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'E-WALLET'),
+              BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'SETTINGS'),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildLogo(double size) {
-    return Image.asset(
-      'assets/images/logo.png',
+    return Container(
       width: size,
       height: size,
-      fit: BoxFit.contain,
-      errorBuilder: (context, error, stackTrace) {
-        return Container(
-          width: size,
-          height: size,
-          decoration: const BoxDecoration(
-            color: Color(0xFFD4AF37),
-            shape: BoxShape.circle,
-          ),
-          child: Center(
-            child: Icon(
-              Icons.account_balance_wallet,
-              size: size * 0.6,
-              color: Colors.black,
-            ),
-          ),
-        );
-      },
+      child: Image.asset(
+        'assets/images/logo.png',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          print('Error loading app bar logo: $error');
+          return Image.asset(
+            'assets/icon/icon.png',
+            width: size,
+            height: size,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              print('Error loading icon: $error');
+              return Container(
+                width: size,
+                height: size,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFD4AF37),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Icon(
+                    Icons.account_balance_wallet,
+                    size: size * 0.6,
+                    color: Colors.black,
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
     );
   }
 
@@ -498,8 +821,7 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
   }
 }
 
-// ==================== OVERVIEW SCREEN WITH BALANCE TOGGLE ====================
-
+// ==================== OVERVIEW SCREEN ====================
 class OverviewScreen extends StatelessWidget {
   final CryptoWallet cryptoWallet;
   final FiatWallet fiatWallet;
@@ -514,7 +836,12 @@ class OverviewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double totalNetWorth = cryptoWallet.totalValueUSD + fiatWallet.balance + (tradingBot.tradingBalance * 3000);
+    final networkMode = Provider.of<NetworkModeManager>(context);
+    final ecosystem = Provider.of<TydChronosEcosystemService>(context);
+    
+    double totalNetWorth = networkMode.getAdjustedBalance(
+      cryptoWallet.totalValueUSD + fiatWallet.balance + (tradingBot.tradingBalance * 3000)
+    );
 
     return BalanceConsumer(
       builder: (context, balanceManager, child) {
@@ -522,7 +849,64 @@ class OverviewScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // Net Worth Balance
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: networkMode.isTestnetMode ? Colors.orange : Colors.green,
+                    width: 2,
+                  ),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(
+                      networkMode.isTestnetMode ? Icons.security : Icons.attach_money,
+                      color: networkMode.isTestnetMode ? Colors.orange : Colors.green,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${networkMode.currentNetwork} Mode',
+                            style: TextStyle(
+                              color: networkMode.isTestnetMode ? Colors.orange : Colors.green,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          Text(
+                            networkMode.currentNetworkSubtitle,
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        networkMode.toggleNetworkMode();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFD4AF37),
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      ),
+                      child: Text(
+                        'Switch to ${networkMode.isTestnetMode ? 'Mainnet' : 'Testnet'}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
               Container(
                 decoration: BoxDecoration(
                   color: Colors.grey[900],
@@ -552,15 +936,22 @@ class OverviewScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              // Balance Breakdown
               Row(
                 children: [
                   Expanded(
-                    child: _buildBalanceCard('Crypto', balanceManager.formatBalance(cryptoWallet.totalValueUSD), Colors.orange),
+                    child: _buildBalanceCard(
+                      'Crypto', 
+                      networkMode.getNetworkAdjustedBalance(cryptoWallet.totalValueUSD), 
+                      Colors.orange
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _buildBalanceCard('Banking', balanceManager.formatBalance(fiatWallet.balance), Colors.blue),
+                    child: _buildBalanceCard(
+                      'Banking', 
+                      networkMode.getNetworkAdjustedBalance(fiatWallet.balance), 
+                      Colors.blue
+                    ),
                   ),
                 ],
               ),
@@ -568,22 +959,207 @@ class OverviewScreen extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _buildBalanceCard('Trading', balanceManager.formatBalance(tradingBot.tradingBalance * 3000), Colors.green),
+                    child: _buildBalanceCard(
+                      'Trading', 
+                      networkMode.getNetworkAdjustedBalance(tradingBot.tradingBalance * 3000), 
+                      Colors.green
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Container(), // Empty for alignment
+                    child: _buildBalanceCard(
+                      'TydChronos DApp', 
+                      'Connected', 
+                      const Color(0xFFD4AF37)
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 20),
 
-              // Multi-Chain Assets Section
-              _buildMultiChainAssets(balanceManager),
+              _buildMultiChainAssets(balanceManager, networkMode),
+              const SizedBox(height: 20),
+
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.currency_bitcoin, color: Color(0xFFD4AF37)),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'TydChronos Ecosystem',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    if (ecosystem.ethereumAddress == null) ...[
+                      const Text(
+                        'No TydChronos wallet found. Initialize to access full ecosystem.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.add),
+                        label: const Text('Initialize TydChronos Wallet'),
+                        onPressed: () {
+                          ecosystem.initialize();
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFD4AF37),
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        ),
+                      ),
+                    ] else ...[
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Your TydChronos Address:', style: TextStyle(color: Colors.grey)),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.black,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFD4AF37)),
+                            ),
+                            child: SelectableText(
+                              ecosystem.ethereumAddress!,
+                              style: TextStyle(
+                                fontFamily: 'Monospace',
+                                fontSize: 12,
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('DApp Status:', style: TextStyle(color: Colors.grey)),
+                              Text(
+                                'Ready',
+                                style: TextStyle(
+                                  color: Colors.green,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () {
+                              _showVolatilityProtectedTransaction(context, ecosystem, networkMode);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFD4AF37),
+                              foregroundColor: Colors.black,
+                              minimumSize: const Size(double.infinity, 50),
+                            ),
+                            child: const Text('Execute Protected Transaction'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ],
           ),
         );
       },
+    );
+  }
+
+  void _showVolatilityProtectedTransaction(BuildContext context, TydChronosEcosystemService ecosystem, NetworkModeManager networkMode) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Volatility Protected Transaction', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Send 0.01 ETH with price protection', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 10),
+            const Text('🔒 Value locked until blockchain confirmation', style: TextStyle(color: Colors.green, fontSize: 12)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  final result = await ecosystem.executeTydChronosTransaction(
+                    toAddress: '0x742d35Cc6634C0532925a3b8D123456',
+                    amount: 0.01,
+                    symbol: 'ETH',
+                    enableVolatilityProtection: true,
+                    context: context,
+                  );
+                  Navigator.pop(context);
+                  _showSuccessDialog(context, result);
+                } catch (e) {
+                  Navigator.pop(context);
+                  _showErrorDialog(context, e.toString());
+                }
+              },
+              child: const Text('Confirm Protected Transaction'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSuccessDialog(BuildContext context, Map<String, dynamic> result) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Transaction Successful', style: TextStyle(color: Colors.green)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('TX Hash: ${result['txHash']}', style: const TextStyle(color: Colors.white)),
+            const SizedBox(height: 10),
+            const Text('✅ Value protection active', style: TextStyle(color: Colors.green, fontSize: 12)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(BuildContext context, String error) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Transaction Failed', style: TextStyle(color: Colors.red)),
+        content: Text(error, style: const TextStyle(color: Colors.white)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
+          ),
+        ],
+      ),
     );
   }
 
@@ -618,7 +1194,7 @@ class OverviewScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMultiChainAssets(BalanceVisibilityManager balanceManager) {
+  Widget _buildMultiChainAssets(BalanceVisibilityManager balanceManager, NetworkModeManager networkMode) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -643,6 +1219,8 @@ class OverviewScreen extends StatelessWidget {
           itemCount: cryptoWallet.assets.length,
           itemBuilder: (context, index) {
             final asset = cryptoWallet.assets[index];
+            final adjustedValue = networkMode.getAdjustedBalance(asset.usdValue);
+            
             return Container(
               decoration: BoxDecoration(
                 color: Colors.grey[900],
@@ -683,7 +1261,7 @@ class OverviewScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        balanceManager.formatBalance(asset.usdValue),
+                        adjustedValue > 0 ? '\$${adjustedValue.toStringAsFixed(2)}' : '••••••',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -708,8 +1286,7 @@ class OverviewScreen extends StatelessWidget {
   }
 }
 
-// ==================== CRYPTO SCREEN WITH ETHEREUM WALLET ====================
-
+// ==================== CRYPTO SCREEN ====================
 class CryptoScreen extends StatefulWidget {
   final CryptoWallet cryptoWallet;
   final TradingBot tradingBot;
@@ -722,205 +1299,966 @@ class CryptoScreen extends StatefulWidget {
 
 class _CryptoScreenState extends State<CryptoScreen> {
   int _cryptoSelectedIndex = 0;
-  final EthereumService _ethereumService = EthereumService();
-  String? _mnemonic;
-  String? _ethereumAddress;
-  double _balance = 0.0;
-  bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkExistingWallet();
-  }
-
-  Future<void> _checkExistingWallet() async {
-    final address = await _ethereumService.getAddress();
-    if (address != null) {
-      setState(() {
-        _ethereumAddress = address;
-      });
-      _getBalance();
-    }
-  }
-
-  Future<void> _createNewWallet() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      _mnemonic = bip39.generateMnemonic();
-      await _ethereumService.createWalletFromMnemonic(_mnemonic!);
-      final address = await _ethereumService.getAddress();
-      
-      setState(() {
-        _ethereumAddress = address;
-        _isLoading = false;
-      });
-      
-      _showMnemonicDialog(_mnemonic!);
-      _getBalance();
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-      _showError('Failed to create wallet: $e');
-    }
-  }
-
-  Future<void> _getBalance() async {
-    if (_ethereumAddress == null) return;
-    
-    try {
-      final balance = await _ethereumService.getBalance();
-      setState(() {
-        _balance = balance;
-      });
-    } catch (e) {
-      _showError('Failed to get balance: $e');
-    }
-  }
-
-  void _showMnemonicDialog(String mnemonic) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.grey[900],
-          title: Text('🔐 Backup Your Wallet', style: TextStyle(color: Color(0xFFD4AF37))),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Write down these 12 words in order and store them securely:',
-                style: TextStyle(color: Colors.white, fontSize: 16),
-              ),
-              SizedBox(height: 16),
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  border: Border.all(color: Color(0xFFD4AF37)),
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.black,
-                ),
-                child: Text(
-                  mnemonic,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFD4AF37),
-                  ),
-                ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                '⚠️ Never share these words! Anyone with this phrase can access your funds.',
-                style: TextStyle(color: Colors.red, fontSize: 14),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Your Ethereum Address:',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              SelectableText(
-                _ethereumAddress ?? 'Generating...',
-                style: TextStyle(
-                  fontFamily: 'Monospace',
-                  fontSize: 12,
-                  color: Colors.grey[400],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('I have saved it securely', style: TextStyle(color: Color(0xFFD4AF37))),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-
-  void _showFaucetInfo() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: Colors.grey[900],
-          title: Text('💧 Get Test ETH', style: TextStyle(color: Color(0xFFD4AF37))),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('For Goerli Testnet:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                SizedBox(height: 8),
-                _buildFaucetLink('https://goerli-faucet.pk910.de/'),
-                _buildFaucetLink('https://faucet.quicknode.com/ethereum/goerli'),
-                _buildFaucetLink('https://goerlifaucet.com/'),
-                SizedBox(height: 16),
-                Text('For Sepolia Testnet:', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                SizedBox(height: 8),
-                _buildFaucetLink('https://sepolia-faucet.pk910.de/'),
-                _buildFaucetLink('https://faucet.quicknode.com/ethereum/sepolia'),
-                _buildFaucetLink('https://sepolia-faucet.com/'),
-                SizedBox(height: 16),
-                Text(
-                  'Send 0.001 ETH to test transactions. Verify on Etherscan.',
-                  style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Close', style: TextStyle(color: Color(0xFFD4AF37))),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildFaucetLink(String url) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
-      child: GestureDetector(
-        onTap: () {
-          _showError('Open: $url');
-        },
-        child: Text(
-          url,
-          style: TextStyle(
-            color: Colors.blue[400],
-            decoration: TextDecoration.underline,
-            fontSize: 12,
-          ),
-        ),
-      ),
-    );
-  }
 
   void _onCryptoItemTapped(int index) {
     setState(() {
       _cryptoSelectedIndex = index;
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ecosystem = Provider.of<TydChronosEcosystemService>(context);
+    final networkMode = Provider.of<NetworkModeManager>(context);
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: const Color(0xFFD4AF37),
+        elevation: 0,
+        title: const Text(
+          'CRYPTO',
+          style: TextStyle(
+            color: Color(0xFFD4AF37),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          if (ecosystem.ethereumAddress != null)
+            IconButton(
+              icon: const Icon(Icons.qr_code),
+              onPressed: () {
+                _showWalletAddressDialog(ecosystem.ethereumAddress!);
+              },
+              color: const Color(0xFFD4AF37),
+            ),
+          IconButton(
+            icon: const Icon(Icons.language),
+            onPressed: _showNetworkSelector,
+            color: const Color(0xFFD4AF37),
+          ),
+          IconButton(
+            icon: const Icon(Icons.currency_exchange),
+            onPressed: _showCurrencySelector,
+            color: const Color(0xFFD4AF37),
+          ),
+        ],
+      ),
+      body: _cryptoSelectedIndex == 0 ? _buildCryptoWalletTab(networkMode, ecosystem) : _buildAITradingTab(networkMode, ecosystem),
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.black,
+        selectedItemColor: const Color(0xFFD4AF37),
+        unselectedItemColor: Colors.grey.shade600,
+        currentIndex: _cryptoSelectedIndex,
+        onTap: _onCryptoItemTapped,
+        type: BottomNavigationBarType.fixed,
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Crypto Wallet'),
+          BottomNavigationBarItem(icon: Icon(Icons.auto_graph), label: 'AI Trading'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCryptoWalletTab(NetworkModeManager networkMode, TydChronosEcosystemService ecosystem) {
+    return BalanceConsumer(
+      builder: (context, balanceManager, child) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[900],
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Total Crypto Value',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      balanceManager.formatBalance(networkMode.getAdjustedBalance(widget.cryptoWallet.totalValueUSD)),
+                      style: const TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFD4AF37),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+
+              // UPDATED: Added Bridge, Buy, and Sell to quick actions
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: 4,
+                children: [
+                  _buildCryptoActionItem(Icons.arrow_upward, 'Send', Colors.red, () {
+                    _showSendDialog(ecosystem, networkMode, context);
+                  }),
+                  _buildCryptoActionItem(Icons.arrow_downward, 'Receive', Colors.green, () {
+                    _showReceiveDialog(ecosystem);
+                  }),
+                  _buildCryptoActionItem(Icons.swap_horiz, 'Swap', Colors.blue, () {
+                    _showSwapDialog(ecosystem, networkMode, context);
+                  }),
+                  _buildCryptoActionItem(Icons.account_balance_wallet, 'Bridge', Colors.purple, () {
+                    _showBridgeDialog(ecosystem, networkMode, context);
+                  }),
+                  _buildCryptoActionItem(Icons.shopping_cart, 'Buy', Colors.teal, () {
+                    _showBuyDialog(ecosystem, networkMode, context);
+                  }),
+                  _buildCryptoActionItem(Icons.attach_money, 'Sell', Colors.orange, () {
+                    _showSellDialog(ecosystem, networkMode, context);
+                  }),
+                  _buildCryptoActionItem(Icons.security, 'Protected', Colors.green, () {
+                    _showProtectedTransactionDialog(ecosystem, networkMode, context);
+                  }),
+                  _buildCryptoActionItem(Icons.qr_code_scanner, 'Scan', Colors.indigo, () {
+                    _showScanDialog(context);
+                  }),
+                ],
+              ),
+              const SizedBox(height: 20),
+
+              ...widget.cryptoWallet.assets.map((asset) {
+                final adjustedValue = networkMode.getAdjustedBalance(asset.usdValue);
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[900],
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD4AF37).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(
+                        child: Text(
+                          asset.icon,
+                          style: const TextStyle(fontSize: 20),
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      '${asset.symbol} - ${asset.network}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    subtitle: Text(
+                      asset.name,
+                      style: const TextStyle(color: Colors.grey),
+                    ),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          adjustedValue > 0 ? '\$${adjustedValue.toStringAsFixed(2)}' : '••••••',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          balanceManager.formatCryptoBalance(asset.balance),
+                          style: const TextStyle(color: Colors.grey, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildCryptoActionItem(IconData icon, String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.all(4),
+        child: Column(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: color.withOpacity(0.3)),
+              ),
+              child: Icon(icon, color: color),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white, fontSize: 10),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // NEW: Bridge Dialog
+  void _showBridgeDialog(TydChronosEcosystemService ecosystem, NetworkModeManager networkMode, BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Cross-Chain Bridge', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Bridge assets between different blockchains', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 16),
+            _buildNetworkSelector('From Network', 'Ethereum'),
+            const SizedBox(height: 12),
+            _buildNetworkSelector('To Network', 'Polygon'),
+            const SizedBox(height: 12),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Amount',
+                labelStyle: TextStyle(color: Colors.grey),
+              ),
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            const Text('🔒 Secure cross-chain bridge with TydChronos protection', style: TextStyle(color: Colors.green, fontSize: 12)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Bridge transaction initiated'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Start Bridge'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // NEW: Buy Dialog
+  void _showBuyDialog(TydChronosEcosystemService ecosystem, NetworkModeManager networkMode, BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Buy Crypto', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Purchase cryptocurrency with fiat', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 16),
+            _buildAssetSelector('Select Asset', 'ETH'),
+            const SizedBox(height: 12),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Amount (USD)',
+                labelStyle: TextStyle(color: Colors.grey),
+              ),
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            const Text('Estimated: 0.033 ETH', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 16),
+            const Text('💳 Instant bank transfer available', style: TextStyle(color: Colors.blue, fontSize: 12)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Buy order placed successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Buy Now'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // NEW: Sell Dialog
+  void _showSellDialog(TydChronosEcosystemService ecosystem, NetworkModeManager networkMode, BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Sell Crypto', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Sell cryptocurrency for fiat', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 16),
+            _buildAssetSelector('Select Asset', 'ETH'),
+            const SizedBox(height: 12),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Amount to Sell',
+                labelStyle: TextStyle(color: Colors.grey),
+              ),
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            const Text('Estimated: \$50.25 USD', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 16),
+            const Text('💰 Instant withdrawal to bank account', style: TextStyle(color: Colors.green, fontSize: 12)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sell order placed successfully'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Sell Now'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // NEW: Scan Dialog
+  void _showScanDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('QR Scanner', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 200,
+              height: 200,
+              color: Colors.grey[800],
+              child: const Center(
+                child: Icon(Icons.qr_code_scanner, size: 80, color: Colors.grey),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text('Scan QR code for addresses or payment requests', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('QR scanner activated'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Start Scanning'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNetworkSelector(String label, String initialValue) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey[800],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(initialValue, style: const TextStyle(color: Colors.white)),
+              const Icon(Icons.arrow_drop_down, color: Colors.grey),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAssetSelector(String label, String initialValue) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey[800],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFD4AF37).withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Center(
+                      child: Text('🟣', style: TextStyle(fontSize: 12)),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(initialValue, style: const TextStyle(color: Colors.white)),
+                ],
+              ),
+              const Icon(Icons.arrow_drop_down, color: Colors.grey),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Existing methods remain the same...
+  void _showSendDialog(TydChronosEcosystemService ecosystem, NetworkModeManager networkMode, BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Send Crypto', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Recipient Address',
+                labelStyle: TextStyle(color: Colors.grey),
+              ),
+              style: TextStyle(color: Colors.white),
+            ),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Amount',
+                labelStyle: TextStyle(color: Colors.grey),
+              ),
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                const Icon(Icons.security, color: Colors.green, size: 16),
+                const SizedBox(width: 5),
+                const Text('Enable volatility protection', style: TextStyle(color: Colors.green, fontSize: 12)),
+                const Spacer(),
+                Switch(
+                  value: true,
+                  onChanged: (value) {},
+                  activeColor: const Color(0xFFD4AF37),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                try {
+                  await ecosystem.executeTydChronosTransaction(
+                    toAddress: '0x742d35Cc6634C0532925a3b8D123456',
+                    amount: 0.01,
+                    symbol: 'ETH',
+                    enableVolatilityProtection: true,
+                    context: context,
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Sending with volatility protection...'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  Navigator.pop(context);
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Send with Protection'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showReceiveDialog(TydChronosEcosystemService ecosystem) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Receive Crypto', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (ecosystem.ethereumAddress != null) ...[
+              const Text('Your TydChronos Address:', style: TextStyle(color: Colors.white)),
+              const SizedBox(height: 10),
+              SelectableText(
+                ecosystem.ethereumAddress!,
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                width: 200,
+                height: 200,
+                color: Colors.white,
+                child: const Center(
+                  child: Text('TydChronos QR', style: TextStyle(color: Colors.black)),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSwapDialog(TydChronosEcosystemService ecosystem, NetworkModeManager networkMode, BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Swap Assets', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('TydChronos DApp swap interface', style: TextStyle(color: Colors.white)),
+            SizedBox(height: 10),
+            Text('🔒 Volatility protection enabled', style: TextStyle(color: Colors.green, fontSize: 12)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              ecosystem.connectToTydChronosDApp();
+              Navigator.pop(context);
+            },
+            child: const Text('Connect to DApp', style: TextStyle(color: Color(0xFFD4AF37))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showProtectedTransactionDialog(TydChronosEcosystemService ecosystem, NetworkModeManager networkMode, BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Volatility Protection', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.security, color: Colors.green, size: 50),
+            SizedBox(height: 10),
+            Text('TydChronos Volatility Protection', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            Text('• Locks transaction value', style: TextStyle(color: Colors.green, fontSize: 12)),
+            Text('• Protects against price swings', style: TextStyle(color: Colors.green, fontSize: 12)),
+            Text('• Active until blockchain confirmation', style: TextStyle(color: Colors.green, fontSize: 12)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ... (rest of the existing methods remain exactly the same)
+
+  Widget _buildAITradingTab(NetworkModeManager networkMode, TydChronosEcosystemService ecosystem) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          // Snipping Bots Header
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[900],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                const Icon(Icons.smart_toy, size: 50, color: Color(0xFFD4AF37)),
+                const SizedBox(height: 10),
+                const Text(
+                  'TydChronos Snipping Bots',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Advanced DeFi trading automation integrated with TydChronos Smart Contracts',
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // AI Trading Stats
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[900],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                const Text(
+                  'AI Trading Performance',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    Column(
+                      children: [
+                        const Text('Trading Balance', style: TextStyle(color: Colors.grey)),
+                        Text(
+                          networkMode.getNetworkAdjustedBalance(widget.tradingBot.tradingBalance),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        const Text('ETH', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        const Text('Total Profit', style: TextStyle(color: Colors.grey)),
+                        Text(
+                          networkMode.getNetworkAdjustedBalance(widget.tradingBot.totalProfit),
+                          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        const Text('Success Rate', style: TextStyle(color: Colors.grey)),
+                        Text(
+                          '${networkMode.getAdjustedBalance(widget.tradingBot.successRate).toStringAsFixed(1)}%',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Arbitrage Bot
+          _buildBotCard(
+            'Arbitrage Bot',
+            'Automated cross-exchange arbitrage opportunities',
+            Icons.compare_arrows,
+            Colors.green,
+            ecosystem.arbitrageBotActive,
+            () => _activateArbitrageBot(context, ecosystem),
+            () => _deactivateBot(context, ecosystem),
+          ),
+          const SizedBox(height: 16),
+
+          // Liquidity Bot
+          _buildBotCard(
+            'Liquidity Bot',
+            'Automated liquidity provision and yield farming',
+            Icons.water_drop,
+            Colors.blue,
+            ecosystem.liquidityBotActive,
+            () => _activateLiquidityBot(context, ecosystem),
+            () => _deactivateBot(context, ecosystem),
+          ),
+          const SizedBox(height: 16),
+
+          // Market Making Bot
+          _buildBotCard(
+            'Market Making Bot',
+            'Automated market making and spread capture',
+            Icons.trending_up,
+            Colors.orange,
+            ecosystem.marketMakingBotActive,
+            () => _activateMarketMakingBot(context, ecosystem),
+            () => _deactivateBot(context, ecosystem),
+          ),
+          const SizedBox(height: 20),
+
+          // Bot Performance
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[900],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                const Text(
+                  'Bot Performance',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FutureBuilder<Map<String, dynamic>>(
+                  future: ecosystem.getBotPerformance(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const CircularProgressIndicator(color: Color(0xFFD4AF37));
+                    }
+                    if (snapshot.hasError) {
+                      return Text('Error: ${snapshot.error}', style: const TextStyle(color: Colors.red));
+                    }
+                    final performance = snapshot.data ?? {};
+                    return Column(
+                      children: [
+                        _buildPerformanceItem('Total Trades', '${performance['totalTrades'] ?? '0'}'),
+                        _buildPerformanceItem('Success Rate', '${performance['successRate'] ?? '0'}%'),
+                        _buildPerformanceItem('Total Profit', '\$${performance['totalProfit'] ?? '0'}'),
+                        _buildPerformanceItem('Active Bots', '${performance['activeBots'] ?? '0'}'),
+                      ],
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBotCard(
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+    bool isActive,
+    VoidCallback onActivate,
+    VoidCallback onDeactivate,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isActive ? color : Colors.grey.shade700,
+          width: 2,
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          Icon(icon, size: 40, color: color),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  description,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: isActive ? Colors.green : Colors.red,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  isActive ? 'ACTIVE' : 'INACTIVE',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: isActive ? onDeactivate : onActivate,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: isActive ? Colors.red : const Color(0xFFD4AF37),
+                  foregroundColor: Colors.white,
+                ),
+                child: Text(isActive ? 'Deactivate' : 'Activate'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPerformanceItem(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          Text(value, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  void _activateArbitrageBot(BuildContext context, TydChronosEcosystemService ecosystem) async {
+    try {
+      final result = await ecosystem.activateArbitrageBot();
+      _showBotActivationSuccess(context, 'Arbitrage Bot', result);
+    } catch (e) {
+      _showBotActivationError(context, 'Arbitrage Bot', e.toString());
+    }
+  }
+
+  void _activateLiquidityBot(BuildContext context, TydChronosEcosystemService ecosystem) async {
+    try {
+      final result = await ecosystem.activateLiquidityBot();
+      _showBotActivationSuccess(context, 'Liquidity Bot', result);
+    } catch (e) {
+      _showBotActivationError(context, 'Liquidity Bot', e.toString());
+    }
+  }
+
+  void _activateMarketMakingBot(BuildContext context, TydChronosEcosystemService ecosystem) async {
+    try {
+      final result = await ecosystem.activateMarketMakingBot();
+      _showBotActivationSuccess(context, 'Market Making Bot', result);
+    } catch (e) {
+      _showBotActivationError(context, 'Market Making Bot', e.toString());
+    }
+  }
+
+  void _deactivateBot(BuildContext context, TydChronosEcosystemService ecosystem) async {
+    try {
+      await ecosystem.deactivateAllBots();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('All snipping bots deactivated'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error deactivating bots: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showBotActivationSuccess(BuildContext context, String botName, Map<String, dynamic> result) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text('$botName Activated', style: const TextStyle(color: Colors.green)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.check_circle, color: Colors.green, size: 50),
+            const SizedBox(height: 16),
+            Text('$botName is now active and monitoring opportunities', style: const TextStyle(color: Colors.white)),
+            const SizedBox(height: 10),
+            Text('Smart Contract: ${result['contractAddress']}', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBotActivationError(BuildContext context, String botName, String error) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text('$botName Activation Failed', style: const TextStyle(color: Colors.red)),
+        content: Text(error, style: const TextStyle(color: Colors.white)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showNetworkSelector() {
@@ -963,44 +2301,11 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  void _showWalletQR() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text(
-          'Wallet Address',
-          style: TextStyle(color: Color(0xFFD4AF37)),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              widget.cryptoWallet.walletAddress,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Scan QR Code',
-              style: TextStyle(color: Colors.grey),
-            ),
-            // QR code placeholder
-            Container(
-              width: 200,
-              height: 200,
-              color: Colors.white,
-              child: const Center(
-                child: Text('QR Code', style: TextStyle(color: Colors.black)),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _showCurrencySelector() {
-    final currencies = {'USD': '\$', 'EUR': '€', 'GBP': '£', 'NGN': '₦'};
+    final currencies = {
+      'USD': '\$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'CNY': '¥', 'INR': '₹', 
+      'BTC': '₿', 'ETH': 'Ξ', 'NGN': '₦', 'CAD': '\$', 'AUD': '\$'
+    };
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.grey[900],
@@ -1042,495 +2347,46 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        foregroundColor: const Color(0xFFD4AF37),
-        elevation: 0,
+  void _showWalletAddressDialog(String address) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
         title: const Text(
-          'CRYPTO',
-          style: TextStyle(
-            color: Color(0xFFD4AF37),
-            fontWeight: FontWeight.bold,
-          ),
+          'Your TydChronos Address',
+          style: TextStyle(color: Color(0xFFD4AF37)),
         ),
-        actions: [
-          // Network Selector
-          IconButton(
-            icon: const Icon(Icons.language),
-            onPressed: _showNetworkSelector,
-            color: const Color(0xFFD4AF37),
-            tooltip: 'Select Network',
-          ),
-          // Wallet Address/QR
-          IconButton(
-            icon: const Icon(Icons.qr_code),
-            onPressed: _showWalletQR,
-            color: const Color(0xFFD4AF37),
-            tooltip: 'Wallet Address',
-          ),
-          // Currency Selector
-          IconButton(
-            icon: const Icon(Icons.currency_exchange),
-            onPressed: _showCurrencySelector,
-            color: const Color(0xFFD4AF37),
-            tooltip: 'Select Currency',
-          ),
-        ],
-      ),
-      body: _cryptoSelectedIndex == 0 ? _buildCryptoWalletTab() : _buildTradingTab(),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.black,
-        selectedItemColor: const Color(0xFFD4AF37),
-        unselectedItemColor: Colors.grey[600],
-        currentIndex: _cryptoSelectedIndex,
-        onTap: _onCryptoItemTapped,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Crypto Wallet'),
-          BottomNavigationBarItem(icon: Icon(Icons.auto_graph), label: 'AI Trading'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCryptoWalletTab() {
-    return BalanceConsumer(
-      builder: (context, balanceManager, child) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Ethereum Wallet Section
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.currency_bitcoin, color: Color(0xFFD4AF37)),
-                        SizedBox(width: 8),
-                        Text(
-                          'Ethereum Wallet',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 16),
-                    
-                    if (_ethereumAddress == null) ...[
-                      Text(
-                        'No Ethereum wallet found. Create one to start using DeFi features.',
-                        style: TextStyle(color: Colors.grey[400]),
-                      ),
-                      SizedBox(height: 16),
-                      _isLoading
-                          ? Center(child: CircularProgressIndicator(color: Color(0xFFD4AF37)))
-                          : ElevatedButton.icon(
-                              icon: Icon(Icons.add),
-                              label: Text('Create New Wallet'),
-                              onPressed: _createNewWallet,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFFD4AF37),
-                                foregroundColor: Colors.black,
-                                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                              ),
-                            ),
-                    ] else ...[
-                      // Wallet Info
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Address:', style: TextStyle(color: Colors.grey[400])),
-                          SelectableText(
-                            _ethereumAddress!,
-                            style: TextStyle(
-                              fontFamily: 'Monospace',
-                              fontSize: 12,
-                              color: Colors.grey[300],
-                            ),
-                          ),
-                          SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text('Balance:', style: TextStyle(color: Colors.grey[400])),
-                              Text(
-                                '${_balance.toStringAsFixed(4)} ETH',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFFD4AF37),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: 16),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: OutlinedButton.icon(
-                                  icon: Icon(Icons.refresh),
-                                  label: Text('Refresh'),
-                                  onPressed: _getBalance,
-                                  style: OutlinedButton.styleFrom(
-                                    foregroundColor: Color(0xFFD4AF37),
-                                    side: BorderSide(color: Color(0xFFD4AF37)),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  icon: Icon(Icons.water_drop),
-                                  label: Text('Get ETH'),
-                                  onPressed: _showFaucetInfo,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue[800],
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              
-              SizedBox(height: 20),
-              
-              // Total Crypto Value
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Total Crypto Value',
-                      style: TextStyle(color: Colors.grey, fontSize: 16),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      balanceManager.formatBalance(widget.cryptoWallet.totalValueUSD),
-                      style: const TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFD4AF37),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Crypto Quick Actions
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 4,
-                children: [
-                  _buildCryptoActionItem(Icons.arrow_upward, 'Send', Colors.red),
-                  _buildCryptoActionItem(Icons.arrow_downward, 'Receive', Colors.green),
-                  _buildCryptoActionItem(Icons.swap_horiz, 'Swap', Colors.blue),
-                  _buildCryptoActionItem(Icons.qr_code_scanner, 'Scan', Colors.purple),
-                  _buildCryptoActionItem(Icons.currency_bitcoin, 'Buy', Colors.orange),
-                  _buildCryptoActionItem(Icons.sell, 'Sell', Colors.red),
-                  _buildCryptoActionItem(Icons.account_balance, 'Stake', Colors.teal),
-                  _buildCryptoActionItem(Icons.account_balance_wallet, 'Bridge', Colors.cyan),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Other Blockchain Wallets Section
-              Text(
-                'Multi-Chain Wallets',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: 12),
-              
-              GridView.count(
-                shrinkWrap: true,
-                physics: NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                childAspectRatio: 1.5,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                children: [
-                  _buildChainCard('Polygon', Icons.polyline, Colors.purple),
-                  _buildChainCard('Bitcoin', Icons.currency_bitcoin, Colors.orange),
-                  _buildChainCard('zkSync Era', Icons.bolt, Colors.blue),
-                  _buildChainCard('Arbitrum', Icons.settings, Colors.cyan),
-                  _buildChainCard('Optimism', Icons.flash_on, Colors.red),
-                  _buildChainCard('Avalanche', Icons.ac_unit, Colors.red[300]!),
-                ],
-              ),
-              SizedBox(height: 20),
-
-              // Crypto Assets List
-              ...widget.cryptoWallet.assets.map((asset) => Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: ListTile(
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFD4AF37).withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Center(
-                      child: Text(
-                        asset.icon,
-                        style: const TextStyle(fontSize: 20),
-                      ),
-                    ),
-                  ),
-                  title: Text(
-                    '${asset.symbol} - ${asset.network}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  subtitle: Text(
-                    asset.name,
-                    style: const TextStyle(color: Colors.grey),
-                  ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        balanceManager.formatBalance(asset.usdValue),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        balanceManager.formatCryptoBalance(asset.balance),
-                        style: const TextStyle(color: Colors.grey, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              )),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildChainCard(String name, IconData icon, Color color) {
-    return Card(
-      color: Color(0xFF1A1A1A),
-      child: InkWell(
-        onTap: () {
-          _showError('$name wallet coming soon!');
-        },
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 32, color: color),
-            SizedBox(height: 8),
-            Text(
-              name,
+            SelectableText(
+              address,
               style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+                fontFamily: 'Monospace',
+                fontSize: 12,
+                color: Colors.grey.shade300,
               ),
             ),
-            SizedBox(height: 4),
-            Text(
-              'Coming Soon',
-              style: TextStyle(
-                color: Colors.grey[500],
-                fontSize: 10,
-              ),
+            const SizedBox(height: 20),
+            const Text(
+              'TydChronos Ecosystem Wallet Address',
+              style: TextStyle(color: Colors.grey, fontSize: 12),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildCryptoActionItem(IconData icon, String label, Color color) {
-    return Container(
-      margin: const EdgeInsets.all(4),
-      child: Column(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: color.withOpacity(0.3)),
-            ),
-            child: Icon(icon, color: color),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white, fontSize: 10),
-            textAlign: TextAlign.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close', style: TextStyle(color: Color(0xFFD4AF37))),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildTradingTab() {
-    return BalanceConsumer(
-      builder: (context, balanceManager, child) {
-        return Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              // Trading Bot Status
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[900],
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.smart_toy, color: Color(0xFFD4AF37), size: 30),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'AI Trading Bot',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const Spacer(),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: widget.tradingBot.isActive ? Colors.green : Colors.red,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            widget.tradingBot.isActive ? 'ACTIVE' : 'INACTIVE',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        Column(
-                          children: [
-                            const Text('Trading Balance', style: TextStyle(color: Colors.grey)),
-                            Text(
-                              balanceManager.formatCryptoBalance(widget.tradingBot.tradingBalance),
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                            const Text('ETH', style: TextStyle(color: Colors.grey, fontSize: 12)),
-                          ],
-                        ),
-                        Column(
-                          children: [
-                            const Text('Total Profit', style: TextStyle(color: Colors.grey)),
-                            Text(
-                              balanceManager.formatBalance(widget.tradingBot.totalProfit),
-                              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                        Column(
-                          children: [
-                            const Text('Success Rate', style: TextStyle(color: Colors.grey)),
-                            Text(
-                              '${widget.tradingBot.successRate}%',
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    ElevatedButton(
-                      onPressed: () {},
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFD4AF37),
-                        foregroundColor: Colors.black,
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'EXECUTE TRADE',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    OutlinedButton(
-                      onPressed: () {},
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        minimumSize: const Size(double.infinity, 50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        'SELL ASSETS',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
 
-// ==================== E-WALLET SCREEN WITH BALANCE TOGGLE ====================
-
+// ==================== E-WALLET SCREEN ====================
 class EWalletScreen extends StatefulWidget {
   final FiatWallet fiatWallet;
 
@@ -1558,28 +2414,18 @@ class _EWalletScreenState extends State<EWalletScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history),
-            onPressed: () {},
-            color: const Color(0xFFD4AF37),
-            tooltip: 'Transactions',
-          ),
-          IconButton(
-            icon: const Icon(Icons.timeline),
-            onPressed: () {},
-            color: const Color(0xFFD4AF37),
-            tooltip: 'Activities',
-          ),
-        ],
       ),
       body: _eWalletSelectedIndex == 0 ? _buildWalletTab() : _buildBankingTab(),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.black,
         selectedItemColor: const Color(0xFFD4AF37),
-        unselectedItemColor: Colors.grey[600],
+        unselectedItemColor: Colors.grey.shade600,
         currentIndex: _eWalletSelectedIndex,
-        onTap: _onEWalletItemTapped,
+        onTap: (index) {
+          setState(() {
+            _eWalletSelectedIndex = index;
+          });
+        },
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
@@ -1589,12 +2435,6 @@ class _EWalletScreenState extends State<EWalletScreen> {
     );
   }
 
-  void _onEWalletItemTapped(int index) {
-    setState(() {
-      _eWalletSelectedIndex = index;
-    });
-  }
-
   Widget _buildWalletTab() {
     return BalanceConsumer(
       builder: (context, balanceManager, child) {
@@ -1602,7 +2442,6 @@ class _EWalletScreenState extends State<EWalletScreen> {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              // Balance
               Container(
                 decoration: BoxDecoration(
                   color: Colors.grey[900],
@@ -1625,32 +2464,6 @@ class _EWalletScreenState extends State<EWalletScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
-              // Quick Actions
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: 2,
-                childAspectRatio: 3,
-                children: [
-                  _buildEWalletActionItem('Transfer TydChronos', Icons.send, Colors.blue),
-                  _buildEWalletActionItem('Transfer Bank', Icons.account_balance, Colors.green),
-                  _buildEWalletActionItem('Withdraw', Icons.arrow_upward, Colors.orange),
-                  _buildEWalletActionItem('Transaction History', Icons.history, Colors.purple),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Recent Transactions
-              const Text(
-                'Recent Transactions',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 16),
               ...widget.fiatWallet.transactions.map((transaction) => Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
@@ -1693,24 +2506,6 @@ class _EWalletScreenState extends State<EWalletScreen> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildEWalletActionItem(String label, IconData icon, Color color) {
-    return Container(
-      margin: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: color),
-        title: Text(
-          label,
-          style: const TextStyle(color: Colors.white),
-        ),
-        onTap: () {},
-      ),
     );
   }
 
@@ -1847,7 +2642,6 @@ class _EWalletScreenState extends State<EWalletScreen> {
 }
 
 // ==================== SETTINGS & SECURITY SCREEN ====================
-
 class SettingsSecurityScreen extends StatelessWidget {
   const SettingsSecurityScreen({super.key});
 
@@ -1867,8 +2661,6 @@ class SettingsSecurityScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-
-          // Security Settings
           Container(
             decoration: BoxDecoration(
               color: Colors.grey[900],
@@ -1890,13 +2682,37 @@ class SettingsSecurityScreen extends StatelessWidget {
                 _buildSecurityItem('Biometric Authentication', Icons.fingerprint, true),
                 _buildSecurityItem('Two-Factor Authentication', Icons.security, true),
                 _buildSecurityItem('Transaction PIN', Icons.pin, true),
-                _buildSecurityItem('Backup Recovery Phrase', Icons.backup, false),
+                _buildSecurityItem('Volatility Protection', Icons.security, true),
               ],
             ),
           ),
           const SizedBox(height: 20),
-
-          // App Settings
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[900],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'TydChronos Ecosystem',
+                  style: TextStyle(
+                    color: Color(0xFFD4AF37),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildSettingsItem('DApp Connection', 'Connected', Icons.link),
+                _buildSettingsItem('Smart Contracts', 'Active', Icons.code),
+                _buildSettingsItem('Snipping Bots', '3 Available', Icons.smart_toy),
+                _buildSettingsItem('Volatility Protection', 'Enabled', Icons.security),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
           Container(
             decoration: BoxDecoration(
               color: Colors.grey[900],
@@ -1918,35 +2734,6 @@ class SettingsSecurityScreen extends StatelessWidget {
                 _buildSettingsItem('Currency', 'USD', Icons.currency_exchange),
                 _buildSettingsItem('Language', 'English', Icons.language),
                 _buildSettingsItem('Theme', 'Dark', Icons.dark_mode),
-                _buildSettingsItem('Notifications', 'On', Icons.notifications),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // About
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey[900],
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'About',
-                  style: TextStyle(
-                    color: Color(0xFFD4AF37),
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                _buildAboutItem('Version', '1.0.0', Icons.info),
-                _buildAboutItem('Privacy Policy', 'View', Icons.privacy_tip),
-                _buildAboutItem('Terms of Service', 'View', Icons.description),
-                _buildAboutItem('Support', 'Contact', Icons.support),
               ],
             ),
           ),
@@ -1968,16 +2755,6 @@ class SettingsSecurityScreen extends StatelessWidget {
   }
 
   Widget _buildSettingsItem(String title, String value, IconData icon) {
-    return ListTile(
-      leading: Icon(icon, color: const Color(0xFFD4AF37)),
-      title: Text(title, style: const TextStyle(color: Colors.white)),
-      subtitle: Text(value, style: const TextStyle(color: Colors.grey)),
-      trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
-      onTap: () {},
-    );
-  }
-
-  Widget _buildAboutItem(String title, String value, IconData icon) {
     return ListTile(
       leading: Icon(icon, color: const Color(0xFFD4AF37)),
       title: Text(title, style: const TextStyle(color: Colors.white)),
