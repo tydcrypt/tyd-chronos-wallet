@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+echo "=== Checking Node.js version ==="
+node --version
+npm --version
+
 echo "=== Installing Flutter ==="
 # Install Flutter
 git clone https://github.com/flutter/flutter.git --depth 1 -b stable
