@@ -1,0 +1,6 @@
+# Flutter web configuration
+web:
+  renderer: html
+  resources:
+    - assets/images/
+    - assets/icon/

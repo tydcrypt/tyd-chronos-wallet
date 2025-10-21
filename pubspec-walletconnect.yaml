@@ -1,0 +1,22 @@
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.2
+  http: ^1.1.0
+  shared_preferences: ^2.3.2
+  web3dart: ^2.7.3
+  web_socket_channel: ^3.0.0
+  bip39: ^1.0.6
+  bip32: ^2.0.0
+  encrypt: ^5.0.3
+  flutter_secure_storage: ^8.0.0
+  # WalletConnect dependencies
+  walletconnect_dart: ^3.0.2
+  qr_code_scanner: ^1.0.1
+  url_launcher: ^6.1.11
+  webview_flutter: ^4.4.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
