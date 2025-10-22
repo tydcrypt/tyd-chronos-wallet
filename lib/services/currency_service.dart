@@ -79,11 +79,11 @@ class CurrencyService {
     final convertedAmount = convertAmount(amount, 'USD', currencyCode);
     
     if (currencyCode == 'BTC' || currencyCode == 'ETH') {
-      return '\$symbol\${convertedAmount.toStringAsFixed(8)}';
+      return '$symbol${convertedAmount.toStringAsFixed(8)}';
     } else if (currencyCode == 'JPY' || currencyCode == 'INR' || currencyCode == 'NGN') {
-      return '\$symbol\${convertedAmount.toStringAsFixed(0)}';
+      return '$symbol${convertedAmount.toStringAsFixed(0)}';
     } else {
-      return '\$symbol\${convertedAmount.toStringAsFixed(2)}';
+      return '$symbol${convertedAmount.toStringAsFixed(2)}';
     }
   }
 }
