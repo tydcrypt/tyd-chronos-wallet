@@ -1,7 +1,8 @@
-mport 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import 'package:bip39/bip39.dart' as bip39;
+import 'package:flutter/services.dart';
 import 'services/ethereum_service.dart';
 import 'services/currency_service.dart';
 import 'services/price_feed_service.dart';
@@ -274,8 +275,101 @@ class TydChronosEcosystemButton extends StatelessWidget {
   }
 }
 
+// ==================== TYDCHRONOS LOGO WIDGET ====================
+class TydChronosLogo extends StatelessWidget {
+  final double size;
+  final bool withBackground;
+  final bool isAppBarIcon;
+
+  const TydChronosLogo({
+    super.key,
+    required this.size,
+    this.withBackground = true,
+    this.isAppBarIcon = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final assetPath = isAppBarIcon 
+        ? 'assets/icon/icon.png'
+        : 'assets/images/logo.png';
+
+    return Container(
+      width: size,
+      height: size,
+      decoration: withBackground ? _buildBackgroundDecoration() : null,
+      child: Image.asset(
+        assetPath,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        cacheWidth: size.toInt(),
+        cacheHeight: size.toInt(),
+        errorBuilder: (context, error, stackTrace) {
+          print('Error loading $assetPath: $error');
+          return _buildFallbackIcon();
+        },
+      ),
+    );
+  }
+
+  BoxDecoration _buildBackgroundDecoration() {
+    return BoxDecoration(
+      gradient: const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color(0xFFD4AF37),
+          Color(0xFFFFD700),
+          Color(0xFFD4AF37),
+        ],
+      ),
+      borderRadius: BorderRadius.circular(size / 4),
+      boxShadow: [
+        BoxShadow(
+          color: const Color(0xFFD4AF37).withOpacity(0.3),
+          blurRadius: 15,
+          spreadRadius: 2,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFallbackIcon() {
+    return Center(
+      child: Icon(
+        Icons.account_balance_wallet,
+        size: size * (withBackground ? 0.6 : 0.8),
+        color: withBackground ? Colors.black : const Color(0xFFD4AF37),
+      ),
+    );
+  }
+}
+
+// ==================== DEBUG ASSET CHECK ====================
+void _debugCheckAssets() async {
+  print('🔄 Checking asset availability...');
+  
+  final assetsToCheck = [
+    'assets/images/logo.png',
+    'assets/icon/icon.png',
+  ];
+  
+  for (final asset in assetsToCheck) {
+    try {
+      final data = await rootBundle.load(asset);
+      print('✅ $asset loaded successfully (${data.lengthInBytes} bytes)');
+    } catch (e) {
+      print('❌ $asset failed to load: $e');
+    }
+  }
+}
+
 // ==================== MAIN APP ====================
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
+  _debugCheckAssets();
+  
   runApp(
     MultiProvider(
       providers: [
@@ -426,7 +520,7 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildLogo(150),
+            const TydChronosLogo(size: 150, withBackground: true, isAppBarIcon: false),
             const SizedBox(height: 30),
             const CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD4AF37)),
@@ -459,59 +553,6 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogo(double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(size / 2),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFFD4AF37).withOpacity(0.3),
-            blurRadius: 20,
-            spreadRadius: 5,
-          ),
-        ],
-      ),
-      child: Image.asset(
-        'assets/images/logo.png',
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) {
-          print('Error loading logo: $error');
-          return _buildPlaceholderLogo(size);
-        },
-      ),
-    );
-  }
-
-  Widget _buildPlaceholderLogo(double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFD4AF37),
-            Color(0xFFFFD700),
-            Color(0xFFD4AF37),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(size / 2),
-      ),
-      child: Center(
-        child: Icon(
-          Icons.account_balance_wallet,
-          size: size * 0.6,
-          color: Colors.black,
         ),
       ),
     );
@@ -686,7 +727,7 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
             elevation: 0,
             leading: Padding(
               padding: const EdgeInsets.all(8.0),
-              child: _buildLogo(35),
+              child: TydChronosLogo(size: 35, withBackground: false, isAppBarIcon: true),
             ),
             title: const Text(
               'TydChronos Wallet',
@@ -744,46 +785,6 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildLogo(double size) {
-    return Container(
-      width: size,
-      height: size,
-      child: Image.asset(
-        'assets/images/logo.png',
-        width: size,
-        height: size,
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) {
-          print('Error loading app bar logo: $error');
-          return Image.asset(
-            'assets/icon/icon.png',
-            width: size,
-            height: size,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              print('Error loading icon: $error');
-              return Container(
-                width: size,
-                height: size,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFD4AF37),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Icon(
-                    Icons.account_balance_wallet,
-                    size: size * 0.6,
-                    color: Colors.black,
-                  ),
-                ),
-              );
-            },
-          );
-        },
       ),
     );
   }
@@ -1036,13 +1037,33 @@ class OverviewScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                               border: Border.all(color: const Color(0xFFD4AF37)),
                             ),
-                            child: SelectableText(
-                              ecosystem.ethereumAddress!,
-                              style: TextStyle(
-                                fontFamily: 'Monospace',
-                                fontSize: 12,
-                                color: Colors.grey.shade300,
-                              ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: SelectableText(
+                                    ecosystem.ethereumAddress!,
+                                    style: TextStyle(
+                                      fontFamily: 'Monospace',
+                                      fontSize: 12,
+                                      color: Colors.grey.shade300,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.copy, size: 18),
+                                  color: const Color(0xFFD4AF37),
+                                  onPressed: () {
+                                    Clipboard.setData(ClipboardData(text: ecosystem.ethereumAddress!));
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Address copied to clipboard'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -1394,7 +1415,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
               ),
               const SizedBox(height: 20),
 
-              // UPDATED: Added Bridge, Buy, and Sell to quick actions
+              // UPDATED: Added Transfer TydChronos Wallet to quick actions
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -1418,8 +1439,8 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   _buildCryptoActionItem(Icons.attach_money, 'Sell', Colors.orange, () {
                     _showSellDialog(ecosystem, networkMode, context);
                   }),
-                  _buildCryptoActionItem(Icons.security, 'Protected', Colors.green, () {
-                    _showProtectedTransactionDialog(ecosystem, networkMode, context);
+                  _buildCryptoActionItem(Icons.account_balance, 'Transfer TydChronos', Colors.amber, () {
+                    _showTransferTydChronosDialog(context, ecosystem, networkMode);
                   }),
                   _buildCryptoActionItem(Icons.qr_code_scanner, 'Scan', Colors.indigo, () {
                     _showScanDialog(context);
@@ -1511,6 +1532,50 @@ class _CryptoScreenState extends State<CryptoScreen> {
               label,
               style: const TextStyle(color: Colors.white, fontSize: 10),
               textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // NEW: Transfer TydChronos Wallet Dialog
+  void _showTransferTydChronosDialog(BuildContext context, TydChronosEcosystemService ecosystem, NetworkModeManager networkMode) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Transfer to TydChronos Wallet', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Transfer fiat funds from Crypto wallet to E-wallet', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 16),
+            _buildAssetSelector('Select Asset', 'USD'),
+            const SizedBox(height: 12),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Amount',
+                labelStyle: TextStyle(color: Colors.grey),
+              ),
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            const Text('Transfer to: E-Wallet', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 16),
+            const Text('💸 Instant transfer between wallets', style: TextStyle(color: Colors.green, fontSize: 12)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Transfer to TydChronos Wallet completed'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Transfer Now'),
             ),
           ],
         ),
@@ -1787,7 +1852,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                 Switch(
                   value: true,
                   onChanged: (value) {},
-                  activeColor: const Color(0xFFD4AF37),
+                  activeThumbColor: const Color(0xFFD4AF37),
                 ),
               ],
             ),
@@ -1884,30 +1949,6 @@ class _CryptoScreenState extends State<CryptoScreen> {
       ),
     );
   }
-
-  void _showProtectedTransactionDialog(TydChronosEcosystemService ecosystem, NetworkModeManager networkMode, BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text('Volatility Protection', style: TextStyle(color: Color(0xFFD4AF37))),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.security, color: Colors.green, size: 50),
-            SizedBox(height: 10),
-            Text('TydChronos Volatility Protection', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            SizedBox(height: 10),
-            Text('• Locks transaction value', style: TextStyle(color: Colors.green, fontSize: 12)),
-            Text('• Protects against price swings', style: TextStyle(color: Colors.green, fontSize: 12)),
-            Text('• Active until blockchain confirmation', style: TextStyle(color: Colors.green, fontSize: 12)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ... (rest of the existing methods remain exactly the same)
 
   Widget _buildAITradingTab(NetworkModeManager networkMode, TydChronosEcosystemService ecosystem) {
     return SingleChildScrollView(
@@ -2414,6 +2455,16 @@ class _EWalletScreenState extends State<EWalletScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_balance_wallet),
+            onPressed: () {
+              _showTransferTydChronosDialog(context);
+            },
+            color: const Color(0xFFD4AF37),
+            tooltip: 'Transfer TydChronos Wallet',
+          ),
+        ],
       ),
       body: _eWalletSelectedIndex == 0 ? _buildWalletTab() : _buildBankingTab(),
       bottomNavigationBar: BottomNavigationBar(
@@ -2431,6 +2482,56 @@ class _EWalletScreenState extends State<EWalletScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
           BottomNavigationBarItem(icon: Icon(Icons.account_balance), label: 'Banking'),
         ],
+      ),
+    );
+  }
+
+  // NEW: Transfer TydChronos Wallet Dialog for E-Wallet
+  void _showTransferTydChronosDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Transfer TydChronos Wallet', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Transfer fiat funds to another TydChronos Wallet', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 16),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Recipient TydChronos Address',
+                labelStyle: TextStyle(color: Colors.grey),
+              ),
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Amount',
+                labelStyle: TextStyle(color: Colors.grey),
+              ),
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            const Text('Transfer Type: External TydChronos Wallet', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            const SizedBox(height: 16),
+            const Text('🔒 Secure transfer with TydChronos protection', style: TextStyle(color: Colors.green, fontSize: 12)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Transfer to TydChronos Wallet initiated'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Transfer Now'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2460,10 +2561,64 @@ class _EWalletScreenState extends State<EWalletScreen> {
                         color: Color(0xFFD4AF37),
                       ),
                     ),
+                    const SizedBox(height: 20),
+                    
+                    // NEW: Trio buttons below Available Balance
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildActionButton(
+                            Icons.arrow_upward,
+                            'Withdraw',
+                            Colors.red,
+                            () {
+                              _showWithdrawDialog(context);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildActionButton(
+                            Icons.account_balance,
+                            'Transfer Bank',
+                            Colors.blue,
+                            () {
+                              _showTransferBankDialog(context);
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildActionButton(
+                            Icons.account_balance_wallet,
+                            'Transfer TydChronos',
+                            Colors.amber,
+                            () {
+                              _showTransferTydChronosDialog(context);
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
               const SizedBox(height: 20),
+              
+              // NEW: Added title for Recent Transactions
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: const Text(
+                  'Recent Transactions',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              
               ...widget.fiatWallet.transactions.map((transaction) => Container(
                 margin: const EdgeInsets.only(bottom: 8),
                 decoration: BoxDecoration(
@@ -2506,6 +2661,142 @@ class _EWalletScreenState extends State<EWalletScreen> {
           ),
         );
       },
+    );
+  }
+
+  // NEW: Action Button Widget
+  Widget _buildActionButton(IconData icon, String label, Color color, VoidCallback onPressed) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color.withOpacity(0.1),
+        foregroundColor: color,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: BorderSide(color: color.withOpacity(0.3)),
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 20),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // NEW: Withdraw Dialog
+  void _showWithdrawDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Withdraw Funds', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Withdraw funds to your bank account', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 16),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Amount',
+                labelStyle: TextStyle(color: Colors.grey),
+              ),
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Bank Account',
+                labelStyle: TextStyle(color: Colors.grey),
+              ),
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            const Text('💸 1-3 business days processing', style: TextStyle(color: Colors.blue, fontSize: 12)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Withdrawal request submitted'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Withdraw Now'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // NEW: Transfer Bank Dialog
+  void _showTransferBankDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text('Transfer to Bank', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Transfer funds to another bank account', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 16),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Amount',
+                labelStyle: TextStyle(color: Colors.grey),
+              ),
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Recipient Account Number',
+                labelStyle: TextStyle(color: Colors.grey),
+              ),
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            const TextField(
+              decoration: InputDecoration(
+                labelText: 'Recipient Name',
+                labelStyle: TextStyle(color: Colors.grey),
+              ),
+              style: TextStyle(color: Colors.white),
+            ),
+            const SizedBox(height: 16),
+            const Text('🔒 Secure bank transfer', style: TextStyle(color: Colors.green, fontSize: 12)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Bank transfer initiated'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              },
+              child: const Text('Transfer Now'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
