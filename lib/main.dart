@@ -2289,7 +2289,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                 Switch(
                   value: true,
                   onChanged: (value) {},
-                  activeThumbColor: const Color(0xFFD4AF37),
+                  thumbColor: MaterialStateProperty.all<Color?>(const Color(0xFFD4AF37)),
                 ),
               ],
             ),
@@ -3687,7 +3687,7 @@ class SettingsSecurityScreen extends StatelessWidget {
       trailing: Switch(
         value: isEnabled,
         onChanged: (value) {},
-        activeThumbColor: const Color(0xFFD4AF37),
+        thumbColor: MaterialStateProperty.all<Color?>(const Color(0xFFD4AF37)),
       ),
     );
   }
