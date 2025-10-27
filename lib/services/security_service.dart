@@ -1,84 +1,57 @@
-import 'package:shared_preferences/shared_preferences.dart';
+// Security Service
+// Handles encryption, authentication, and security features
+
+import 'dart:convert';
+// import 'package:encrypt/encrypt.dart'; // Uncomment when encrypt package is added
 
 class SecurityService {
-  static const String _pinKey = 'transaction_pin';
-  static const String _biometricKey = 'biometric_enabled';
-  static const String _twoFactorKey = 'two_factor_enabled';
+  // late Encrypter _encrypter;
+  
+  SecurityService() {
+    // Default constructor - no parameters
+    // final key = Key.fromUtf8("default-key-32-chars-long-here!".padRight(32));
+    // _encrypter = Encrypter(AES(key));
+  }
   
   Future<void> initialize() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (!prefs.containsKey(_pinKey)) {
-      await prefs.setString(_pinKey, '0000');
-    }
-    if (!prefs.containsKey(_biometricKey)) {
-      await prefs.setBool(_biometricKey, true);
-    }
-    if (!prefs.containsKey(_twoFactorKey)) {
-      await prefs.setBool(_twoFactorKey, true);
-    }
-  }
-
-  Future<bool> requireBiometricAuth() async {
-    final prefs = await SharedPreferences.getInstance();
-    final biometricEnabled = prefs.getBool(_biometricKey) ?? true;
-    
-    if (biometricEnabled) {
-      print('Biometric authentication required');
-      return true;
-    }
-    
-    return true;
-  }
-
-  Future<bool> requireTransactionPin() async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedPin = prefs.getString(_pinKey) ?? '0000';
-    
-    print('Transaction PIN verification required');
-    return true;
+    // Initialize security service
+    await Future.delayed(Duration(milliseconds: 100));
   }
   
-  Future<void> setTransactionPin(String newPin) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_pinKey, newPin);
+  Future<void> requireTransactionPin() async {
+    // Simulate PIN requirement
+    await Future.delayed(Duration(seconds: 1));
   }
   
-  Future<bool> isBiometricEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_biometricKey) ?? true;
-  }
-  
-  Future<bool> isTwoFactorEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_twoFactorKey) ?? true;
-  }
-  
-  Future<void> setBiometricEnabled(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_biometricKey, enabled);
-  }
-  
-  Future<void> setTwoFactorEnabled(bool enabled) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(_twoFactorKey, enabled);
+  Future<void> requireBiometricAuth() async {
+    // Simulate biometric authentication
+    await Future.delayed(Duration(seconds: 2));
   }
   
   String encryptData(String data) {
-    return data;
+    // TODO: Implement real encryption when package is available
+    return base64Encode(utf8.encode(data));
   }
   
   String decryptData(String encryptedData) {
-    return encryptedData;
+    // TODO: Implement real decryption when package is available  
+    try {
+      return utf8.decode(base64Decode(encryptedData));
+    } catch (e) {
+      return encryptedData; // Fallback
+    }
   }
-
-  Future<bool> verifyPin(String pin) async {
-    final prefs = await SharedPreferences.getInstance();
-    final storedPin = prefs.getString(_pinKey) ?? '0000';
-    await Future.delayed(const Duration(seconds: 1));
-    return pin == storedPin;
+  
+  bool validatePassword(String password) {
+    // Basic password validation
+    return password.length >= 8 &&
+           password.contains(RegExp(r'[A-Z]')) &&
+           password.contains(RegExp(r'[a-z]')) &&
+           password.contains(RegExp(r'[0-9]'));
   }
-
-  Future<bool> isBiometricAvailable() async {
-    return true;
+  
+  // Method to initialize with custom key (for future use)
+  void initializeWithKey(String encryptionKey) {
+    // _encrypter = Encrypter(AES(Key.fromUtf8(encryptionKey.padRight(32))));
   }
 }

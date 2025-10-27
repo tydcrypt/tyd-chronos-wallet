@@ -1,21 +1,27 @@
 #!/bin/bash
-set -e
 
-echo "=== Checking Node.js version ==="
-node --version
-npm --version
+echo "🚀 Building TydChronos Wallet for Netlify..."
 
-echo "=== Installing Flutter ==="
-# Install Flutter
-git clone https://github.com/flutter/flutter.git --depth 1 -b stable
-export PATH="$PATH:$(pwd)/flutter/bin"
+# Clean previous builds
+echo "🧹 Cleaning previous builds..."
+flutter clean
 
-echo "=== Setting up Flutter ==="
-flutter precache
-flutter config --enable-web
-flutter doctor
+# Get dependencies
+echo "📦 Getting dependencies..."
+flutter pub get
 
-echo "=== Building Flutter web ==="
-flutter build web --release
+# Build for web
+echo "🌐 Building web release..."
+flutter build web --release --web-renderer html
 
-echo "=== Build completed successfully ==="
+# Verify build completed
+if [ -f "build/web/index.html" ] && [ -f "build/web/main.dart.js" ]; then
+    echo "✅ Build successful!"
+    echo "📁 Build contents:"
+    ls -la build/web/*.html build/web/*.dart.js build/web/*.js | head -10
+else
+    echo "❌ Build failed - missing critical files"
+    echo "Files in build/web/:"
+    ls -la build/web/
+    exit 1
+fi

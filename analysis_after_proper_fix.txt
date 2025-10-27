@@ -1,0 +1,220 @@
+Analyzing tyd_chronos_wallet_new...                             
+
+   info • Use 'const' with the constructor to improve performance • lib/components/walletconnect_button.dart:100:13 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/components/walletconnect_button.dart:126:37 • deprecated_member_use
+warning • The value of the field '_tradingService' isn't used • lib/features/automated_trading/controllers/trading_controller.dart:5:24 • unused_field
+   info • Parameter 'key' could be a super parameter • lib/features/automated_trading/screens/automated_trading_screen.dart:6:9 • use_super_parameters
+   info • The private field _lockedValues could be 'final' • lib/main.dart:20:23 • prefer_final_fields
+   info • Don't invoke 'print' in production code • lib/main.dart:63:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/main.dart:90:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/main.dart:163:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/main.dart:170:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/main.dart:310:11 • avoid_print
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/main.dart:331:42 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/main.dart:352:3 • avoid_print
+   info • Don't invoke 'print' in production code • lib/main.dart:362:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/main.dart:364:7 • avoid_print
+   info • Use 'const' with the constructor to improve performance • lib/main.dart:518:12 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/main.dart:520:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/main.dart:521:16 • prefer_const_constructors
+   info • Use 'const' literals as arguments to constructors of '@immutable' classes • lib/main.dart:523:21 • prefer_const_literals_to_create_immutables
+  error • The element type 'SizedBox' can't be assigned to the list type 'SingleChildWidget' • lib/main.dart:721:15 • list_element_type_not_assignable
+  error • Undefined name 'child' • lib/main.dart:722:7 • undefined_identifier
+  error • Expected to find ')' • lib/main.dart:722:12 • expected_token
+  error • Expected to find ']' • lib/main.dart:722:12 • expected_token
+warning • The declaration '_onItemTapped' isn't referenced • lib/main.dart:794:8 • unused_element
+warning • The declaration '_getCurrentScreen' isn't referenced • lib/main.dart:800:10 • unused_element
+   info • Use 'const' with the constructor to improve performance • lib/main.dart:819:16 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/main.dart:889:36 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/main.dart:998:21 • prefer_const_constructors
+   info • Use 'const' literals as arguments to constructors of '@immutable' classes • lib/main.dart:999:33 • prefer_const_literals_to_create_immutables
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/main.dart:1470:56 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/main.dart:1529:30 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/main.dart:1531:49 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/main.dart:1807:54 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance • lib/main.dart:1970:20 • prefer_const_constructors
+   info • Use 'const' literals as arguments to constructors of '@immutable' classes • lib/main.dart:1971:25 • prefer_const_literals_to_create_immutables
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/main.dart:2677:32 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/main.dart:2682:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/placeholder_logo.dart:19:24 • deprecated_member_use
+  error • Target of URI doesn't exist: 'ethereum/ethereum_wallet_screen.dart' • lib/presentation/screens/ethereum_navigation.dart:2:8 • uri_does_not_exist
+  error • The name 'EthereumWalletScreen' isn't a class • lib/presentation/screens/ethereum_navigation.dart:15:11 • creation_with_non_type
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:38:16 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:46:11 • prefer_const_constructors
+   info • Use 'const' literals as arguments to constructors of '@immutable' classes • lib/screens/ewallet_screen.dart:50:17 • prefer_const_literals_to_create_immutables
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:51:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:52:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:70:16 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:74:11 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:76:20 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:78:11 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:96:16 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:100:11 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:102:20 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:104:11 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:122:15 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/ewallet_screen.dart:125:34 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:139:22 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:143:22 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:153:15 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/ewallet_screen.dart:156:41 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:157:18 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/ewallet_screen.dart:163:18 • prefer_const_constructors
+   info • The private field _totalNetWorth could be 'final' • lib/screens/overview_screen.dart:12:10 • prefer_final_fields
+   info • The private field _cryptoBalance could be 'final' • lib/screens/overview_screen.dart:13:10 • prefer_final_fields
+   info • The private field _bankingBalance could be 'final' • lib/screens/overview_screen.dart:14:10 • prefer_final_fields
+   info • The private field _tradingBalance could be 'final' • lib/screens/overview_screen.dart:15:10 • prefer_final_fields
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:40:16 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:48:11 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:52:18 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:60:26 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:71:21 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:74:30 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:84:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:96:17 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:106:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:116:17 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:127:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:128:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:130:22 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:135:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:156:18 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:167:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:184:15 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/overview_screen.dart:187:34 • deprecated_member_use
+   info • Use 'const' with the constructor to improve performance • lib/screens/overview_screen.dart:195:19 • prefer_const_constructors
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/splash_screen.dart:66:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/screens/splash_screen.dart:93:44 • deprecated_member_use
+  error • Target of URI doesn't exist: 'package:qr_flutter/qr_flutter.dart' • lib/screens/walletconnect_dialog.dart:2:8 • uri_does_not_exist
+  error • The method 'QrImageView' isn't defined for the type '_WalletConnectDialogState' • lib/screens/walletconnect_dialog.dart:78:22 • undefined_method
+  error • Undefined name 'QrVersions' • lib/screens/walletconnect_dialog.dart:80:26 • undefined_identifier
+  error • The method 'connectToDApp' isn't defined for the type 'WalletConnectService' • lib/screens/walletconnect_dialog.dart:171:34 • undefined_method
+   info • Don't invoke 'print' in production code • lib/services/backend_api_service.dart:3:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/backend_api_service.dart:8:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/backend_api_service.dart:13:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/backend_api_service.dart:18:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/backend_api_service.dart:19:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/backend_api_service.dart:41:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/backend_api_service.dart:45:5 • avoid_print
+   info • 'extractAddress' is deprecated and shouldn't be used. Please use [address] • lib/services/ethereum_service.dart:41:38 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/services/ethereum_service.dart:43:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/ethereum_service.dart:46:7 • avoid_print
+   info • 'extractAddress' is deprecated and shouldn't be used. Please use [address] • lib/services/ethereum_service.dart:78:38 • deprecated_member_use
+   info • 'extractAddress' is deprecated and shouldn't be used. Please use [address] • lib/services/ethereum_service.dart:109:40 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/services/ethereum_service.dart:112:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/ethereum_service.dart:133:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/ethereum_service.dart:151:7 • avoid_print
+   info • 'EtherAmount.fromUnitAndValue' is deprecated and shouldn't be used. Please use fromInt, fromBigInt or fromBase10String • lib/services/ethereum_service.dart:170:27 • deprecated_member_use
+   info • 'EtherAmount.fromUnitAndValue' is deprecated and shouldn't be used. Please use fromInt, fromBigInt or fromBase10String • lib/services/ethereum_service.dart:175:19 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/services/ethereum_service.dart:182:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/ethereum_service.dart:197:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/ethereum_service.dart:207:7 • avoid_print
+   info • 'EtherAmount.fromUnitAndValue' is deprecated and shouldn't be used. Please use fromInt, fromBigInt or fromBase10String • lib/services/ethereum_service.dart:208:14 • deprecated_member_use
+   info • Don't invoke 'print' in production code • lib/services/ethereum_service.dart:217:7 • avoid_print
+  error • The method '_updateLoadingState' isn't defined for the type 'WalletConnectService' • lib/services/lazy_walletconnect.dart:8:5 • undefined_method
+  error • The method '_setupProviders' isn't defined for the type 'WalletConnectService' • lib/services/lazy_walletconnect.dart:12:11 • undefined_method
+  error • The method '_resolveNetwork' isn't defined for the type 'WalletConnectService' • lib/services/lazy_walletconnect.dart:13:11 • undefined_method
+   info • Use 'const' with the constructor to improve performance • lib/services/lazy_walletconnect.dart:20:26 • prefer_const_constructors
+   info • Don't invoke 'print' in production code • lib/services/optimized_walletconnect_service.dart:26:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/optimized_walletconnect_service.dart:41:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/optimized_walletconnect_service.dart:46:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/optimized_walletconnect_service.dart:52:5 • avoid_print
+   info • Use 'const' with the constructor to improve performance • lib/services/optimized_walletconnect_service.dart:53:26 • prefer_const_constructors
+   info • Don't invoke 'print' in production code • lib/services/optimized_walletconnect_service.dart:54:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/optimized_walletconnect_service.dart:58:5 • avoid_print
+   info • Use 'const' with the constructor to improve performance • lib/services/optimized_walletconnect_service.dart:59:26 • prefer_const_constructors
+   info • Don't invoke 'print' in production code • lib/services/optimized_walletconnect_service.dart:60:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/optimized_walletconnect_service.dart:64:5 • avoid_print
+   info • Use 'const' with the constructor to improve performance • lib/services/optimized_walletconnect_service.dart:65:26 • prefer_const_constructors
+   info • Don't invoke 'print' in production code • lib/services/optimized_walletconnect_service.dart:66:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/optimized_walletconnect_service.dart:72:5 • avoid_print
+warning • Two keys in a map literal shouldn't be equal • lib/services/price_feed_service.dart:14:7 • equal_keys_in_map
+warning • Two keys in a map literal shouldn't be equal • lib/services/price_feed_service.dart:15:7 • equal_keys_in_map
+   info • Don't invoke 'print' in production code • lib/services/security_service.dart:26:7 • avoid_print
+warning • The value of the local variable 'storedPin' isn't used • lib/services/security_service.dart:35:11 • unused_local_variable
+   info • Don't invoke 'print' in production code • lib/services/security_service.dart:37:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/snipping_bot_service.dart:8:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/snipping_bot_service.dart:26:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/snipping_bot_service.dart:41:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/snipping_bot_service.dart:56:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/snipping_bot_service.dart:71:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/transaction_service.dart:11:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/transaction_service.dart:38:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/transaction_service.dart:43:5 • avoid_print
+warning • Unused import: 'walletconnect_service.dart' • lib/services/walletconnect_adapter.dart:2:8 • unused_import
+  error • The method 'initialize' isn't defined for the type 'RealWalletConnectService' • lib/services/walletconnect_adapter.dart:18:24 • undefined_method
+warning • The value of the field '_web3wallet' isn't used • lib/services/walletconnect_adapter.dart:82:16 • unused_field
+warning • The value of the field '_ethereumService' isn't used • lib/services/walletconnect_adapter.dart:83:17 • unused_field
+   info • The private field _activeSessions could be 'final' • lib/services/walletconnect_adapter.dart:86:17 • prefer_final_fields
+  error • Target of URI doesn't exist: 'package:walletconnect_flutter_v2/walletconnect_flutter_v2.dart' • lib/services/walletconnect_service.dart:3:8 • uri_does_not_exist
+  error • Undefined class 'Web3Wallet' • lib/services/walletconnect_service.dart:9:3 • undefined_class
+  error • The name 'SessionData' isn't a type, so it can't be used as a type argument • lib/services/walletconnect_service.dart:13:8 • non_type_as_type_argument
+  error • The name 'SessionData' isn't a type, so it can't be used as a type argument • lib/services/walletconnect_service.dart:17:8 • non_type_as_type_argument
+  error • Undefined name 'Web3Wallet' • lib/services/walletconnect_service.dart:22:27 • undefined_identifier
+  error • The name 'PairingMetadata' isn't a class • lib/services/walletconnect_service.dart:24:25 • creation_with_non_type
+  error • The name 'Namespace' isn't a type, so it can't be used as a type argument • lib/services/walletconnect_service.dart:59:59 • non_type_as_type_argument
+  error • The property 'topic' can't be unconditionally accessed because the receiver can be 'null' • lib/services/walletconnect_service.dart:97:56 • unchecked_use_of_nullable_value
+   info • Don't invoke 'print' in production code • lib/services/walletconnect_service_fixed.dart:12:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/walletconnect_service_fixed.dart:17:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/walletconnect_service_fixed.dart:23:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/walletconnect_service_fixed.dart:35:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/services/walletconnect_service_fixed.dart:39:5 • avoid_print
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:25:26 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:28:26 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:31:26 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:34:26 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:38:26 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:54:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:55:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:58:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:59:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:62:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:64:22 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:66:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:71:22 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:73:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:78:26 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/ui/progressive_loader.dart:87:21 • prefer_const_constructors
+warning • Unused import: 'simple_performance_monitor.dart' • lib/utils/parallel_init.dart:2:8 • unused_import
+   info • Don't invoke 'print' in production code • lib/utils/parallel_init.dart:5:3 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/parallel_init.dart:12:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/parallel_init.dart:18:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/parallel_init.dart:21:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/parallel_init.dart:27:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/parallel_init.dart:33:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/parallel_init.dart:39:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/parallel_init.dart:50:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/parallel_init.dart:51:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/parallel_init.dart:55:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/parallel_init.dart:60:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/parallel_init.dart:61:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/performance_monitor.dart:9:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/performance_monitor.dart:19:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/performance_monitor.dart:22:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/performance_monitor.dart:28:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/performance_monitor.dart:31:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/performance_monitor.dart:35:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/simple_performance_monitor.dart:9:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/simple_performance_monitor.dart:19:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/simple_performance_monitor.dart:22:9 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/simple_performance_monitor.dart:28:5 • avoid_print
+warning • The value of the local variable 'status' isn't used • lib/utils/simple_performance_monitor.dart:30:13 • unused_local_variable
+   info • Don't invoke 'print' in production code • lib/utils/simple_performance_monitor.dart:31:7 • avoid_print
+warning • The value of the local variable 'totalTime' isn't used • lib/utils/simple_performance_monitor.dart:34:11 • unused_local_variable
+   info • Don't invoke 'print' in production code • lib/utils/simple_performance_monitor.dart:35:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/utils/simple_performance_monitor.dart:36:5 • avoid_print
+   info • Parameter 'key' could be a super parameter • lib/widgets/currency_selector.dart:8:9 • use_super_parameters
+   info • Use 'const' with the constructor to improve performance • lib/widgets/currency_selector.dart:39:18 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/widgets/currency_selector.dart:50:28 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/widgets/currency_selector.dart:55:25 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/widgets/currency_selector.dart:87:22 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/widgets/currency_selector.dart:89:13 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/widgets/currency_selector.dart:100:16 • prefer_const_constructors
+   info • Use 'const' with the constructor to improve performance • lib/widgets/currency_selector.dart:102:14 • prefer_const_constructors
+  error • The name 'MyApp' isn't a class • test/widget_test.dart:16:35 • creation_with_non_type
+  error • Target of URI doesn't exist: 'package:tydchronos_wallet/main.dart' • test_app.dart:2:8 • uri_does_not_exist
+  error • The function 'WalletConnectService' isn't defined • test_app.dart:10:21 • undefined_function
+  error • The function 'NetworkModeManager' isn't defined • test_app.dart:15:21 • undefined_function
+  error • The function 'BalanceVisibilityManager' isn't defined • test_app.dart:26:21 • undefined_function
+
+216 issues found. (ran in 288.8s)

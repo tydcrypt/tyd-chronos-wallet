@@ -1,56 +1,32 @@
-class BackendApiService {
-  Future<void> registerWallet(String walletAddress) async {
-    print('Registering wallet: $walletAddress');
-    await Future.delayed(const Duration(seconds: 1));
-  }
-  
-  Future<void> syncWalletData(String walletAddress) async {
-    print('Syncing wallet data for: $walletAddress');
-    await Future.delayed(const Duration(milliseconds: 500));
-  }
-  
-  Future<void> logDAppConnection(String walletAddress) async {
-    print('Logging DApp connection: $walletAddress');
-    await Future.delayed(const Duration(milliseconds: 500));
-  }
-  
-  Future<void> recordTransaction(Map<String, dynamic> transaction) async {
-    print('Recording transaction: ${transaction['txHash']}');
-    print('Volatility protection: ${transaction['volatilityProtection']}');
-  }
-  
-  Future<Map<String, dynamic>> getTydChronosEcosystemStatus(String walletAddress) async {
-    return {
-      'walletRegistered': true,
-      'dappConnected': true,
-      'smartContracts': ['Arbitrage', 'Liquidity', 'MarketMaking'],
-      'volatilityProtection': true,
-      'ecosystemVersion': '1.0.0',
-    };
-  }
-  
-  Future<Map<String, dynamic>> getSnippingBotStatus(String walletAddress) async {
-    return {
-      'arbitrageBot': {'active': true, 'profit': 1250.50},
-      'liquidityBot': {'active': false, 'fees': 89.30},
-      'marketMakingBot': {'active': true, 'spreadProfit': 567.80},
-    };
-  }
+// Backend API Service
+// Handles communication with TydChronos backend
 
-  Future<void> logConnection(String walletAddress, String walletType) async {
-    print('Logging connection: $walletAddress -> $walletType');
+class BackendApiService {
+  BackendApiService() {
+    print("BackendApiService initialized");
   }
   
-  Future<void> logDisconnection(String walletAddress) async {
-    print('Logging disconnection: $walletAddress');
+  // Method called by TydChronosEcosystemService
+  Future<void> registerWallet(String address) async {
+    await Future.delayed(Duration(seconds: 1));
+    print("Wallet registered: $address");
   }
   
-  Future<Map<String, dynamic>> getUserProfile(String walletAddress) async {
-    return {
-      'walletAddress': walletAddress,
-      'tier': 'premium',
-      'joinDate': '2024-01-01',
-      'totalTransactions': 42,
-    };
+  // Method called by TydChronosEcosystemService
+  Future<void> syncWalletData(String address) async {
+    await Future.delayed(Duration(milliseconds: 500));
+    print("Wallet data synced: $address");
+  }
+  
+  // Method called by TydChronosEcosystemService
+  Future<void> logDAppConnection(String address) async {
+    await Future.delayed(Duration(milliseconds: 300));
+    print("DApp connection logged: $address");
+  }
+  
+  // Method called by TydChronosEcosystemService
+  Future<void> recordTransaction(Map<String, dynamic> transaction) async {
+    await Future.delayed(Duration(milliseconds: 400));
+    print("Transaction recorded: ${transaction['txHash']}");
   }
 }

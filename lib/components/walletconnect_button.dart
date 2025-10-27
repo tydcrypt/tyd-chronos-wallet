@@ -18,7 +18,7 @@ class WalletConnectButton extends StatelessWidget {
                     ? const Color(0xFFD4AF37) // Gold when connected
                     : Colors.white70,
               ),
-              if (walletConnect.isConnected)
+              if (walletConnect.isConnected == true)
                 Positioned(
                   right: 0,
                   top: 0,
@@ -34,7 +34,7 @@ class WalletConnectButton extends StatelessWidget {
             ],
           ),
           onPressed: () {
-            if (walletConnect.isConnected) {
+            if (walletConnect.isConnected == true) {
               _showConnectionInfo(context, walletConnect);
             } else {
               _connectToWallet(context, walletConnect);

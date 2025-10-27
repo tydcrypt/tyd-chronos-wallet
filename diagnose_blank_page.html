@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TydChronos Wallet Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>TydChronos Wallet - Debug Mode</h1>
+    <div id="status">Initializing...</div>
+    <div id="console"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const consoleDiv = document.getElementById('console');
+            consoleDiv.innerHTML += `<div class="${type}">${new Date().toLocaleTimeString()}: ${message}</div>`;
+            console.log(message);
+        }
+
+        log("Starting TydChronos Wallet debug...");
+
+        // Test 1: Check if Flutter.js is loaded
+        if (typeof flutter === 'undefined') {
+            log("❌ Flutter.js not loaded - checking script...", 'error');
+            
+            // Try to load Flutter.js manually
+            const script = document.createElement('script');
+            script.src = 'flutter.js';
+            script.onload = function() {
+                log("✅ Flutter.js loaded manually");
+                initializeApp();
+            };
+            script.onerror = function() {
+                log("❌ Failed to load flutter.js", 'error');
+            };
+            document.head.appendChild(script);
+        } else {
+            log("✅ Flutter.js is available");
+            initializeApp();
+        }
+
+        function initializeApp() {
+            log("Initializing Flutter application...");
+            
+            // Test 2: Check service worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    log(`Found ${registrations.length} service workers`);
+                    registrations.forEach(function(reg, index) {
+                        log(`Service Worker ${index + 1}: ${reg.scope}`);
+                    });
+                });
+            }
+
+            // Test 3: Load Flutter entrypoint
+            try {
+                log("Loading Flutter entrypoint...");
+                flutter.loadEntrypoint({
+                    serviceWorker: {
+                        serviceWorkerVersion: Date.now(),
+                    },
+                    onEntrypointLoaded: function(engineInitializer) {
+                        log("✅ Flutter engine loaded");
+                        document.getElementById('status').innerHTML = "Flutter engine loaded - initializing...";
+                        
+                        engineInitializer.initializeEngine().then(function(appRunner) {
+                            log("✅ Flutter engine initialized");
+                            document.getElementById('status').innerHTML = "Flutter engine initialized - running app...";
+                            
+                            appRunner.runApp().then(function() {
+                                log("✅ Flutter app running");
+                                document.getElementById('status').innerHTML = "✅ TydChronos Wallet is running!";
+                            }).catch(function(error) {
+                                log("❌ Failed to run app: " + error, 'error');
+                                document.getElementById('status').innerHTML = "❌ Failed to run app";
+                            });
+                        }).catch(function(error) {
+                            log("❌ Failed to initialize engine: " + error, 'error');
+                            document.getElementById('status').innerHTML = "❌ Failed to initialize engine";
+                        });
+                    }
+                });
+            } catch (error) {
+                log("❌ Error loading Flutter: " + error, 'error');
+                document.getElementById('status').innerHTML = "❌ Error loading Flutter";
+            }
+        }
+
+        // Test 4: Check for main.dart.js
+        setTimeout(function() {
+            fetch('main.dart.js')
+                .then(response => {
+                    if (response.ok) {
+                        log("✅ main.dart.js is accessible");
+                    } else {
+                        log("❌ main.dart.js not accessible: " + response.status, 'error');
+                    }
+                })
+                .catch(error => {
+                    log("❌ Cannot access main.dart.js: " + error, 'error');
+                });
+        }, 1000);
+    </script>
+</body>
+</html>

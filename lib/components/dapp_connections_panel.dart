@@ -50,7 +50,7 @@ class DAppConnectionsPanel extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           
-          if (!walletConnect.isInitialized)
+          if (walletConnect.isInitialized != true)
             const Column(
               children: [
                 CircularProgressIndicator(color: Color(0xFFD4AF37)),

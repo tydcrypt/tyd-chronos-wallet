@@ -1,3 +1,4 @@
+import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -10,10 +11,11 @@ import 'services/transaction_service.dart';
 import 'services/backend_api_service.dart';
 import 'services/security_service.dart';
 import 'services/snipping_bot_service.dart';
+import 'features/automated_trading/automated_trading.dart';
 
 // ==================== NETWORK MODE MANAGER ====================
 class NetworkModeManager extends ChangeNotifier {
-  bool _isTestnetMode = true;
+  bool _isTestnetMode = false;
   final PriceFeedService _priceService = PriceFeedService();
   Map<String, double> _livePrices = {};
   Map<String, double> _lockedValues = {}; // For volatility protection
@@ -68,6 +70,36 @@ class NetworkModeManager extends ChangeNotifier {
   }
 }
 
+// ==================== CURRENCY MANAGER ====================
+class CurrencyManager extends ChangeNotifier {
+  String _selectedCurrency = 'USD';
+  final Map<String, String> _currencySymbols = {
+    'USD': '\$',
+    'EUR': '€',
+    'GBP': '£',
+    'JPY': '¥',
+    'CNY': '¥',
+    'INR': '₹',
+    'NGN': '₦', // Nigerian Naira
+    'CAD': '\$',
+    'AUD': '\$',
+    'BTC': '₿',
+    'ETH': 'Ξ',
+  };
+  
+  String get selectedCurrency => _selectedCurrency;
+  String get currencySymbol => _currencySymbols[_selectedCurrency] ?? '\$';
+  
+  void setCurrency(String currency) {
+    _selectedCurrency = currency;
+    notifyListeners();
+  }
+  
+  String formatBalance(double amount, {int decimalPlaces = 2}) {
+    return '$currencySymbol${amount.toStringAsFixed(decimalPlaces)}';
+  }
+}
+
 // ==================== TYDCHRONOS ECOSYSTEM SERVICE ====================
 class TydChronosEcosystemService extends ChangeNotifier {
   String? _ethereumAddress;
@@ -80,30 +112,109 @@ class TydChronosEcosystemService extends ChangeNotifier {
   bool _liquidityBotActive = false;
   bool _marketMakingBotActive = false;
   
+  // Bot trading data
+  Map<String, dynamic> _bot1Performance = {
+    'tradingBalance': 0.5,
+    'profit': 250.0,
+    'successRate': 75.0,
+    'totalTrades': 45
+  };
+  
+  Map<String, dynamic> _bot2Performance = {
+    'tradingBalance': 0.3,
+    'profit': 180.0,
+    'successRate': 68.0,
+    'totalTrades': 32
+  };
+  
+  Map<String, dynamic> _bot3Performance = {
+    'tradingBalance': 0.4,
+    'profit': 320.0,
+    'successRate': 82.0,
+    'totalTrades': 28
+  };
+  
   String? get ethereumAddress => _ethereumAddress;
   bool get arbitrageBotActive => _arbitrageBotActive;
   bool get liquidityBotActive => _liquidityBotActive;
   bool get marketMakingBotActive => _marketMakingBotActive;
   
+  Map<String, dynamic> get bot1Performance => _bot1Performance;
+  Map<String, dynamic> get bot2Performance => _bot2Performance;
+  Map<String, dynamic> get bot3Performance => _bot3Performance;
+  
+  double get totalTradingBalance => 
+      _bot1Performance['tradingBalance'] + _bot2Performance['tradingBalance'] + _bot3Performance['tradingBalance'];
+  
+  double get totalProfit => 
+      _bot1Performance['profit'] + _bot2Performance['profit'] + _bot3Performance['profit'];
+  
+  double get totalSuccessRate => 
+      (_bot1Performance['successRate'] + _bot2Performance['successRate'] + _bot3Performance['successRate']) / 3;
+  
   Future<void> initialize() async {
-    print('[TydChronos] Ecosystem Service initialized');
-    await _securityService.initialize();
-    
-    // Generate or retrieve Ethereum address
-    final ethService = EthereumService();
-    _ethereumAddress = await ethService.getAddress();
-    if (_ethereumAddress == null) {
+    try {
+      print('[TydChronos] Ecosystem Service initializing...');
+      await _securityService.initialize();
+      
+      // Generate or retrieve Ethereum address
+      final ethService = EthereumService();
+      _ethereumAddress = await ethService.getAddress();
+      
+      if (_ethereumAddress == null) {
+        print('[TydChronos] Generating new wallet...');
+        final mnemonic = bip39.generateMnemonic();
+        await ethService.createWalletFromMnemonic(mnemonic);
+        _ethereumAddress = await ethService.getAddress();
+        
+        if (_ethereumAddress != null) {
+          await _backendService.registerWallet(_ethereumAddress!);
+          print('[TydChronos] New wallet created: $_ethereumAddress');
+        }
+      } else {
+        print('[TydChronos] Existing wallet found: $_ethereumAddress');
+      }
+      
+      // Sync with TydChronos backend
+      if (_ethereumAddress != null) {
+        await _backendService.syncWalletData(_ethereumAddress!);
+        
+        // Initialize snipping bots
+        await _snippingBotService.initialize(_ethereumAddress!);
+      }
+      
+      print('[TydChronos] Ecosystem Service initialized successfully');
+      notifyListeners();
+    } catch (e) {
+      print('[TydChronos] Initialization error: $e');
+    }
+  }
+  
+  Future<void> initializeWallet() async {
+    try {
+      print('[TydChronos] Manual wallet initialization requested');
+      await _securityService.initialize();
+      
+      final ethService = EthereumService();
       final mnemonic = bip39.generateMnemonic();
       await ethService.createWalletFromMnemonic(mnemonic);
       _ethereumAddress = await ethService.getAddress();
-      await _backendService.registerWallet(_ethereumAddress!);
+      
+      if (_ethereumAddress != null) {
+        await _backendService.registerWallet(_ethereumAddress!);
+        await _backendService.syncWalletData(_ethereumAddress!);
+        await _snippingBotService.initialize(_ethereumAddress!);
+        
+        print('[TydChronos] Wallet created successfully: $_ethereumAddress');
+        notifyListeners();
+        
+        return;
+      }
+      throw Exception('Failed to generate wallet address');
+    } catch (e) {
+      print('[TydChronos] Manual initialization error: $e');
+      rethrow;
     }
-    
-    // Sync with TydChronos backend
-    await _backendService.syncWalletData(_ethereumAddress!);
-    
-    // Initialize snipping bots
-    await _snippingBotService.initialize(_ethereumAddress!);
   }
   
   // ==================== SNIPPING BOT MANAGEMENT ====================
@@ -154,6 +265,84 @@ class TydChronosEcosystemService extends ChangeNotifier {
   
   Future<Map<String, dynamic>> getBotPerformance() async {
     return await _snippingBotService.getBotPerformance();
+  }
+  
+  // Send ETH to bots
+  Future<void> sendEthToBot1(double amount) async {
+    await _updateBotBalance('bot1', amount);
+    notifyListeners();
+  }
+  
+  Future<void> sendEthToBot2(double amount) async {
+    await _updateBotBalance('bot2', amount);
+    notifyListeners();
+  }
+  
+  Future<void> sendEthToBot3(double amount) async {
+    await _updateBotBalance('bot3', amount);
+    notifyListeners();
+  }
+  
+  // Send ETH from trading balance back to crypto wallet
+  Future<void> sendEthToCryptoWallet(double amount) async {
+    try {
+      // Determine which bot to take funds from (prioritize by balance)
+      if (_bot1Performance['tradingBalance'] >= amount) {
+        _bot1Performance['tradingBalance'] -= amount;
+      } else if (_bot2Performance['tradingBalance'] >= amount) {
+        _bot2Performance['tradingBalance'] -= amount;
+      } else if (_bot3Performance['tradingBalance'] >= amount) {
+        _bot3Performance['tradingBalance'] -= amount;
+      } else {
+        // If no single bot has enough, take proportionally
+        final total = totalTradingBalance;
+        if (total >= amount) {
+          final ratio = amount / total;
+          _bot1Performance['tradingBalance'] -= _bot1Performance['tradingBalance'] * ratio;
+          _bot2Performance['tradingBalance'] -= _bot2Performance['tradingBalance'] * ratio;
+          _bot3Performance['tradingBalance'] -= _bot3Performance['tradingBalance'] * ratio;
+        } else {
+          throw Exception('Insufficient trading balance');
+        }
+      }
+      
+      print('Sent $amount ETH from trading balance to crypto wallet');
+      notifyListeners();
+    } catch (e) {
+      print('Error sending ETH to crypto wallet: $e');
+      rethrow;
+    }
+  }
+  
+  // Send profits back to crypto wallet
+  Future<void> sendProfitsToCryptoWallet() async {
+    // Simulate transferring all profits back to main wallet
+    final totalProfits = totalProfit;
+    _bot1Performance['profit'] = 0.0;
+    _bot2Performance['profit'] = 0.0;
+    _bot3Performance['profit'] = 0.0;
+    
+    print('Sent $totalProfits profits back to crypto wallet');
+    notifyListeners();
+  }
+  
+  Future<void> _updateBotBalance(String bot, double amount) async {
+    // Simulate sending ETH to bot
+    await Future.delayed(const Duration(seconds: 1));
+    
+    switch (bot) {
+      case 'bot1':
+        _bot1Performance['tradingBalance'] += amount;
+        break;
+      case 'bot2':
+        _bot2Performance['tradingBalance'] += amount;
+        break;
+      case 'bot3':
+        _bot3Performance['tradingBalance'] += amount;
+        break;
+    }
+    
+    print('Sent $amount ETH to $bot');
   }
   
   // ==================== TYDCHRONOS DAPP INTEGRATION ====================
@@ -347,38 +536,74 @@ class TydChronosLogo extends StatelessWidget {
 }
 
 // ==================== DEBUG ASSET CHECK ====================
-void _debugCheckAssets() async {
+
+// Asset validation for production
+Future<void> _debugCheckAssets() async {
   print('🔄 Checking asset availability...');
-  
+
   final assetsToCheck = [
     'assets/images/logo.png',
     'assets/icon/icon.png',
   ];
-  
+
   for (final asset in assetsToCheck) {
     try {
       final data = await rootBundle.load(asset);
       print('✅ $asset loaded successfully (${data.lengthInBytes} bytes)');
     } catch (e) {
-      print('❌ $asset failed to load: $e');
+      print('⚠️  $asset not found: $e');
     }
   }
+  
+  print('✅ Asset check completed');
 }
 
-// ==================== MAIN APP ====================
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  _debugCheckAssets();
-  
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (context) => TydChronosEcosystemService()..initialize()),
-        ChangeNotifierProvider(create: (context) => NetworkModeManager()),
-      ],
-      child: const TydChronosWalletApp(),
-    ),
-  );
+
+  try {
+    await _debugCheckAssets();
+
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (context) => TydChronosEcosystemService()..initialize()),
+          ChangeNotifierProvider(create: (context) => NetworkModeManager()),
+          ChangeNotifierProvider(create: (context) => CurrencyManager()),
+        ],
+        child: const TydChronosWalletApp(),
+      ),
+    );
+  } catch (error, stackTrace) {
+    log('🚨 TydChronos Wallet failed to start: $error');
+    log('Stack trace: $stackTrace');
+
+    // Fallback UI for production
+    runApp(
+      MaterialApp(
+        home: Scaffold(
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.error_outline, size: 64, color: Colors.red),
+                SizedBox(height: 20),
+                Text(
+                  'TydChronos Wallet',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  'Initialization error. Please refresh.',
+                  style: TextStyle(color: Colors.red),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class TydChronosWalletApp extends StatelessWidget {
@@ -751,6 +976,20 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
                   );
                 },
               ),
+              Consumer<TydChronosEcosystemService>(
+                builder: (context, ecosystem, child) {
+                  if (ecosystem.ethereumAddress != null) {
+                    return IconButton(
+                      icon: const Icon(Icons.qr_code, color: Color(0xFFD4AF37)),
+                      onPressed: () {
+                        _showAddressDialogWithQR(context, ecosystem.ethereumAddress!);
+                      },
+                      tooltip: 'Your TydChronos Address',
+                    );
+                  }
+                  return const SizedBox();
+                },
+              ),
               const TydChronosEcosystemButton(),
               Builder(
                 builder: (context) {
@@ -780,6 +1019,7 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'OVERVIEW'),
               BottomNavigationBarItem(icon: Icon(Icons.currency_bitcoin), label: 'CRYPTO'),
+              BottomNavigationBarItem(icon: Icon(Icons.auto_awesome_motion), label: 'TRADING'),
               BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'E-WALLET'),
               BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'SETTINGS'),
             ],
@@ -809,8 +1049,13 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
           tradingBot: _tradingBot,
         );
       case 2:
-        return EWalletScreen(fiatWallet: _fiatWallet);
+        return ChangeNotifierProvider(
+          create: (context) => TradingController(),
+          child: const AutomatedTradingScreen(),
+        );
       case 3:
+        return EWalletScreen(fiatWallet: _fiatWallet);
+      case 4:
         return SettingsSecurityScreen();
       default:
         return OverviewScreen(
@@ -819,6 +1064,85 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
           tradingBot: _tradingBot,
         );
     }
+  }
+
+  void _showAddressDialogWithQR(BuildContext context, String address) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          'Your TydChronos Address',
+          style: TextStyle(color: Color(0xFFD4AF37)),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 200,
+              height: 200,
+              color: Colors.white,
+              child: Center(
+                child: Text(
+                  'QR Code\n$address',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.black, fontSize: 10),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFD4AF37)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SelectableText(
+                      address,
+                      style: TextStyle(
+                        fontFamily: 'Monospace',
+                        fontSize: 12,
+                        color: Colors.grey.shade300,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 18),
+                    color: const Color(0xFFD4AF37),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: address));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Address copied to clipboard'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Scan QR code or copy address to receive funds',
+              style: TextStyle(color: Colors.grey, fontSize: 12),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close', style: TextStyle(color: Color(0xFFD4AF37))),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -839,6 +1163,7 @@ class OverviewScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final networkMode = Provider.of<NetworkModeManager>(context);
     final ecosystem = Provider.of<TydChronosEcosystemService>(context);
+    final currencyManager = Provider.of<CurrencyManager>(context);
     
     double totalNetWorth = networkMode.getAdjustedBalance(
       cryptoWallet.totalValueUSD + fiatWallet.balance + (tradingBot.tradingBalance * 3000)
@@ -925,7 +1250,7 @@ class OverviewScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      balanceManager.formatBalance(totalNetWorth),
+                      balanceManager.formatBalance(totalNetWorth, symbol: currencyManager.currencySymbol),
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -942,7 +1267,7 @@ class OverviewScreen extends StatelessWidget {
                   Expanded(
                     child: _buildBalanceCard(
                       'Crypto', 
-                      networkMode.getNetworkAdjustedBalance(cryptoWallet.totalValueUSD), 
+                      networkMode.getNetworkAdjustedBalance(cryptoWallet.totalValueUSD, symbol: currencyManager.currencySymbol), 
                       Colors.orange
                     ),
                   ),
@@ -950,7 +1275,7 @@ class OverviewScreen extends StatelessWidget {
                   Expanded(
                     child: _buildBalanceCard(
                       'Banking', 
-                      networkMode.getNetworkAdjustedBalance(fiatWallet.balance), 
+                      networkMode.getNetworkAdjustedBalance(fiatWallet.balance, symbol: currencyManager.currencySymbol), 
                       Colors.blue
                     ),
                   ),
@@ -962,7 +1287,7 @@ class OverviewScreen extends StatelessWidget {
                   Expanded(
                     child: _buildBalanceCard(
                       'Trading', 
-                      networkMode.getNetworkAdjustedBalance(tradingBot.tradingBalance * 3000), 
+                      networkMode.getNetworkAdjustedBalance(tradingBot.tradingBalance * 3000, symbol: currencyManager.currencySymbol), 
                       Colors.green
                     ),
                   ),
@@ -978,7 +1303,7 @@ class OverviewScreen extends StatelessWidget {
               ),
               const SizedBox(height: 20),
 
-              _buildMultiChainAssets(balanceManager, networkMode),
+              _buildMultiChainAssets(balanceManager, networkMode, currencyManager),
               const SizedBox(height: 20),
 
               Container(
@@ -1015,8 +1340,23 @@ class OverviewScreen extends StatelessWidget {
                       ElevatedButton.icon(
                         icon: const Icon(Icons.add),
                         label: const Text('Initialize TydChronos Wallet'),
-                        onPressed: () {
-                          ecosystem.initialize();
+                        onPressed: () async {
+                          try {
+                            await ecosystem.initializeWallet();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('TydChronos Wallet initialized successfully!'),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error initializing wallet: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFD4AF37),
@@ -1215,7 +1555,7 @@ class OverviewScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildMultiChainAssets(BalanceVisibilityManager balanceManager, NetworkModeManager networkMode) {
+  Widget _buildMultiChainAssets(BalanceVisibilityManager balanceManager, NetworkModeManager networkMode, CurrencyManager currencyManager) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1282,7 +1622,7 @@ class OverviewScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        adjustedValue > 0 ? '\$${adjustedValue.toStringAsFixed(2)}' : '••••••',
+                        adjustedValue > 0 ? '${currencyManager.currencySymbol}${adjustedValue.toStringAsFixed(2)}' : '••••••',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -1331,6 +1671,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
   Widget build(BuildContext context) {
     final ecosystem = Provider.of<TydChronosEcosystemService>(context);
     final networkMode = Provider.of<NetworkModeManager>(context);
+    final currencyManager = Provider.of<CurrencyManager>(context);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -1366,7 +1707,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
           ),
         ],
       ),
-      body: _cryptoSelectedIndex == 0 ? _buildCryptoWalletTab(networkMode, ecosystem) : _buildAITradingTab(networkMode, ecosystem),
+      body: _cryptoSelectedIndex == 0 ? _buildCryptoWalletTab(networkMode, ecosystem, currencyManager) : _buildAITradingTab(networkMode, ecosystem, currencyManager),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.black,
         selectedItemColor: const Color(0xFFD4AF37),
@@ -1382,7 +1723,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  Widget _buildCryptoWalletTab(NetworkModeManager networkMode, TydChronosEcosystemService ecosystem) {
+  Widget _buildCryptoWalletTab(NetworkModeManager networkMode, TydChronosEcosystemService ecosystem, CurrencyManager currencyManager) {
     return BalanceConsumer(
       builder: (context, balanceManager, child) {
         return SingleChildScrollView(
@@ -1403,7 +1744,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      balanceManager.formatBalance(networkMode.getAdjustedBalance(widget.cryptoWallet.totalValueUSD)),
+                      balanceManager.formatBalance(networkMode.getAdjustedBalance(widget.cryptoWallet.totalValueUSD), symbol: currencyManager.currencySymbol),
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -1415,7 +1756,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
               ),
               const SizedBox(height: 20),
 
-              // UPDATED: Added Transfer TydChronos Wallet to quick actions
+              // Quick Actions - REMOVED "Send ETH to Crypto" from here
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -1439,11 +1780,23 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   _buildCryptoActionItem(Icons.attach_money, 'Sell', Colors.orange, () {
                     _showSellDialog(ecosystem, networkMode, context);
                   }),
+                  _buildCryptoActionItem(Icons.smart_toy, 'Send ETH Bot 1', Colors.green, () {
+                    _showSendToBotDialog(context, ecosystem, 'Arbitrage Bot', 'bot1', 0.1);
+                  }),
+                  _buildCryptoActionItem(Icons.water_drop, 'Send ETH Bot 2', Colors.blue, () {
+                    _showSendToBotDialog(context, ecosystem, 'Liquidity Bot', 'bot2', 0.1);
+                  }),
+                  _buildCryptoActionItem(Icons.trending_up, 'Send ETH Bot 3', Colors.orange, () {
+                    _showSendToBotDialog(context, ecosystem, 'Market Making Bot', 'bot3', 0.1);
+                  }),
                   _buildCryptoActionItem(Icons.account_balance, 'Transfer TydChronos', Colors.amber, () {
                     _showTransferTydChronosDialog(context, ecosystem, networkMode);
                   }),
                   _buildCryptoActionItem(Icons.qr_code_scanner, 'Scan', Colors.indigo, () {
                     _showScanDialog(context);
+                  }),
+                  _buildCryptoActionItem(Icons.more_horiz, 'More', Colors.grey, () {
+                    // Additional actions
                   }),
                 ],
               ),
@@ -1488,7 +1841,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          adjustedValue > 0 ? '\$${adjustedValue.toStringAsFixed(2)}' : '••••••',
+                          adjustedValue > 0 ? '${currencyManager.currencySymbol}${adjustedValue.toStringAsFixed(2)}' : '••••••',
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
@@ -1508,6 +1861,91 @@ class _CryptoScreenState extends State<CryptoScreen> {
         );
       },
     );
+  }
+
+  // Send ETH to Bot Dialog
+  void _showSendToBotDialog(BuildContext context, TydChronosEcosystemService ecosystem, String botName, String botId, double defaultAmount) {
+    double amount = defaultAmount;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: Text('Send ETH to $botName', style: const TextStyle(color: Color(0xFFD4AF37))),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Fund your trading bot with ETH', style: TextStyle(color: Colors.white)),
+                const SizedBox(height: 16),
+                TextField(
+                  decoration: const InputDecoration(
+                    labelText: 'ETH Amount',
+                    labelStyle: TextStyle(color: Colors.grey),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    amount = double.tryParse(value) ?? defaultAmount;
+                  },
+                ),
+                const SizedBox(height: 12),
+                Text('Current balance: ${_getBotBalance(ecosystem, botId)} ETH', style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                const SizedBox(height: 16),
+                const Text('🚀 Boost your trading performance', style: const TextStyle(color: Colors.green, fontSize: 12)),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    try {
+                      switch (botId) {
+                        case 'bot1':
+                          await ecosystem.sendEthToBot1(amount);
+                          break;
+                        case 'bot2':
+                          await ecosystem.sendEthToBot2(amount);
+                          break;
+                        case 'bot3':
+                          await ecosystem.sendEthToBot3(amount);
+                          break;
+                      }
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Sent $amount ETH to $botName'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                  child: Text('Send $amount ETH to $botName'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  double _getBotBalance(TydChronosEcosystemService ecosystem, String botId) {
+    switch (botId) {
+      case 'bot1':
+        return ecosystem.bot1Performance['tradingBalance'];
+      case 'bot2':
+        return ecosystem.bot2Performance['tradingBalance'];
+      case 'bot3':
+        return ecosystem.bot3Performance['tradingBalance'];
+      default:
+        return 0.0;
+    }
   }
 
   Widget _buildCryptoActionItem(IconData icon, String label, Color color, VoidCallback onTap) {
@@ -1539,7 +1977,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  // NEW: Transfer TydChronos Wallet Dialog
+  // Transfer TydChronos Wallet Dialog
   void _showTransferTydChronosDialog(BuildContext context, TydChronosEcosystemService ecosystem, NetworkModeManager networkMode) {
     showDialog(
       context: context,
@@ -1583,7 +2021,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  // NEW: Bridge Dialog
+  // Bridge Dialog
   void _showBridgeDialog(TydChronosEcosystemService ecosystem, NetworkModeManager networkMode, BuildContext context) {
     showDialog(
       context: context,
@@ -1627,7 +2065,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  // NEW: Buy Dialog
+  // Buy Dialog
   void _showBuyDialog(TydChronosEcosystemService ecosystem, NetworkModeManager networkMode, BuildContext context) {
     showDialog(
       context: context,
@@ -1671,7 +2109,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  // NEW: Sell Dialog
+  // Sell Dialog
   void _showSellDialog(TydChronosEcosystemService ecosystem, NetworkModeManager networkMode, BuildContext context) {
     showDialog(
       context: context,
@@ -1715,7 +2153,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  // NEW: Scan Dialog
+  // Scan Dialog
   void _showScanDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -1818,7 +2256,6 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  // Existing methods remain the same...
   void _showSendDialog(TydChronosEcosystemService ecosystem, NetworkModeManager networkMode, BuildContext context) {
     showDialog(
       context: context,
@@ -1950,7 +2387,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  Widget _buildAITradingTab(NetworkModeManager networkMode, TydChronosEcosystemService ecosystem) {
+  Widget _buildAITradingTab(NetworkModeManager networkMode, TydChronosEcosystemService ecosystem, CurrencyManager currencyManager) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -1985,7 +2422,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
           ),
           const SizedBox(height: 20),
 
-          // AI Trading Stats
+          // UPDATED: AI Trading Stats with Send ETH to Crypto Wallet button
           Container(
             decoration: BoxDecoration(
               color: Colors.grey[900],
@@ -2008,31 +2445,68 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   children: [
                     Column(
                       children: [
-                        const Text('Trading Balance', style: TextStyle(color: Colors.grey)),
+                        const Text('Total Trading Balance', style: TextStyle(color: Colors.grey)),
                         Text(
-                          networkMode.getNetworkAdjustedBalance(widget.tradingBot.tradingBalance),
+                          '${ecosystem.totalTradingBalance.toStringAsFixed(4)} ETH',
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         ),
-                        const Text('ETH', style: TextStyle(color: Colors.grey, fontSize: 12)),
                       ],
                     ),
                     Column(
                       children: [
                         const Text('Total Profit', style: TextStyle(color: Colors.grey)),
                         Text(
-                          networkMode.getNetworkAdjustedBalance(widget.tradingBot.totalProfit),
+                          '${currencyManager.currencySymbol}${ecosystem.totalProfit.toStringAsFixed(2)}',
                           style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
                     Column(
                       children: [
-                        const Text('Success Rate', style: TextStyle(color: Colors.grey)),
+                        const Text('Total Success Rate', style: TextStyle(color: Colors.grey)),
                         Text(
-                          '${networkMode.getAdjustedBalance(widget.tradingBot.successRate).toStringAsFixed(1)}%',
+                          '${ecosystem.totalSuccessRate.toStringAsFixed(1)}%',
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.account_balance_wallet),
+                        label: const Text('Send Profits to Crypto'),
+                        onPressed: () {
+                          ecosystem.sendProfitsToCryptoWallet();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Profits sent to crypto wallet'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFD4AF37),
+                          foregroundColor: Colors.black,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.arrow_forward),
+                        label: const Text('Send ETH to Crypto'),
+                        onPressed: () {
+                          _showSendToCryptoWalletDialog(context, ecosystem);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -2041,39 +2515,43 @@ class _CryptoScreenState extends State<CryptoScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Arbitrage Bot
-          _buildBotCard(
-            'Arbitrage Bot',
+          // UPDATED: Individual Bot Performance Cards
+          _buildBotPerformanceCard(
+            'Arbitrage Bot / Bot 1',
             'Automated cross-exchange arbitrage opportunities',
             Icons.compare_arrows,
             Colors.green,
+            ecosystem.bot1Performance,
             ecosystem.arbitrageBotActive,
             () => _activateArbitrageBot(context, ecosystem),
             () => _deactivateBot(context, ecosystem),
+            currencyManager,
           ),
           const SizedBox(height: 16),
 
-          // Liquidity Bot
-          _buildBotCard(
-            'Liquidity Bot',
+          _buildBotPerformanceCard(
+            'Liquidity Bot / Bot 2',
             'Automated liquidity provision and yield farming',
             Icons.water_drop,
             Colors.blue,
+            ecosystem.bot2Performance,
             ecosystem.liquidityBotActive,
             () => _activateLiquidityBot(context, ecosystem),
             () => _deactivateBot(context, ecosystem),
+            currencyManager,
           ),
           const SizedBox(height: 16),
 
-          // Market Making Bot
-          _buildBotCard(
-            'Market Making Bot',
+          _buildBotPerformanceCard(
+            'Market Making Bot / Bot 3',
             'Automated market making and spread capture',
             Icons.trending_up,
             Colors.orange,
+            ecosystem.bot3Performance,
             ecosystem.marketMakingBotActive,
             () => _activateMarketMakingBot(context, ecosystem),
             () => _deactivateBot(context, ecosystem),
+            currencyManager,
           ),
           const SizedBox(height: 20),
 
@@ -2087,7 +2565,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
             child: Column(
               children: [
                 const Text(
-                  'Bot Performance',
+                  'Bot Performance Analytics',
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -2109,7 +2587,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                       children: [
                         _buildPerformanceItem('Total Trades', '${performance['totalTrades'] ?? '0'}'),
                         _buildPerformanceItem('Success Rate', '${performance['successRate'] ?? '0'}%'),
-                        _buildPerformanceItem('Total Profit', '\$${performance['totalProfit'] ?? '0'}'),
+                        _buildPerformanceItem('Total Profit', '${currencyManager.currencySymbol}${performance['totalProfit'] ?? '0'}'),
                         _buildPerformanceItem('Active Bots', '${performance['activeBots'] ?? '0'}'),
                       ],
                     );
@@ -2123,14 +2601,93 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  Widget _buildBotCard(
+  // NEW: Send ETH from Trading Balance to Crypto Wallet Dialog
+  void _showSendToCryptoWalletDialog(BuildContext context, TydChronosEcosystemService ecosystem) {
+    double amount = 0.0;
+    final totalTradingBalance = ecosystem.totalTradingBalance;
+    
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: const Text('Send ETH to Crypto Wallet', style: TextStyle(color: Color(0xFFD4AF37))),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Transfer ETH from trading balance to your crypto wallet', style: TextStyle(color: Colors.white)),
+                const SizedBox(height: 16),
+                Text('Available Trading Balance: ${totalTradingBalance.toStringAsFixed(4)} ETH', 
+                  style: const TextStyle(color: Colors.green, fontSize: 14)),
+                const SizedBox(height: 12),
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: 'ETH Amount',
+                    labelStyle: const TextStyle(color: Colors.grey),
+                    suffixIcon: IconButton(
+                      icon: const Text('MAX', style: TextStyle(color: Color(0xFFD4AF37), fontSize: 12)),
+                      onPressed: () {
+                        setState(() {
+                          amount = totalTradingBalance;
+                        });
+                      },
+                    ),
+                  ),
+                  style: const TextStyle(color: Colors.white),
+                  keyboardType: TextInputType.number,
+                  onChanged: (value) {
+                    amount = double.tryParse(value) ?? 0.0;
+                  },
+                  controller: TextEditingController(text: amount > 0 ? amount.toString() : ''),
+                ),
+                const SizedBox(height: 12),
+                if (amount > totalTradingBalance)
+                  const Text('Insufficient balance!', style: TextStyle(color: Colors.red, fontSize: 12)),
+                const SizedBox(height: 16),
+                const Text('💸 Transfer from trading bots to main wallet', style: TextStyle(color: Colors.green, fontSize: 12)),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: amount > 0 && amount <= totalTradingBalance ? () async {
+                    Navigator.pop(context);
+                    try {
+                      await ecosystem.sendEthToCryptoWallet(amount);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Sent $amount ETH to crypto wallet'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } : null,
+                  child: Text('Send ${amount.toStringAsFixed(4)} ETH to Crypto Wallet'),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  // UPDATED: Bot Performance Card with detailed stats
+  Widget _buildBotPerformanceCard(
     String title,
     String description,
     IconData icon,
     Color color,
+    Map<String, dynamic> performance,
     bool isActive,
     VoidCallback onActivate,
     VoidCallback onDeactivate,
+    CurrencyManager currencyManager,
   ) {
     return Container(
       decoration: BoxDecoration(
@@ -2142,58 +2699,103 @@ class _CryptoScreenState extends State<CryptoScreen> {
         ),
       ),
       padding: const EdgeInsets.all(16),
-      child: Row(
+      child: Column(
         children: [
-          Icon(icon, size: 40, color: color),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+          Row(
+            children: [
+              Icon(icon, size: 40, color: color),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      description,
+                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              const SizedBox(width: 16),
+              Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isActive ? Colors.green : Colors.red,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      isActive ? 'ACTIVE' : 'INACTIVE',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: isActive ? onDeactivate : onActivate,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isActive ? Colors.red : const Color(0xFFD4AF37),
+                      foregroundColor: Colors.white,
+                    ),
+                    child: Text(isActive ? 'Deactivate' : 'Activate'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Bot Performance Stats
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                Column(
+                  children: [
+                    const Text('Trading Balance', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text(
+                      '${performance['tradingBalance']} ETH',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                Column(
+                  children: [
+                    const Text('Profit', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text(
+                      '${currencyManager.currencySymbol}${performance['profit']}',
+                      style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                Column(
+                  children: [
+                    const Text('Success Rate', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text(
+                      '${performance['successRate']}%',
+                      style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 16),
-          Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isActive ? Colors.green : Colors.red,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  isActive ? 'ACTIVE' : 'INACTIVE',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: isActive ? onDeactivate : onActivate,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isActive ? Colors.red : const Color(0xFFD4AF37),
-                  foregroundColor: Colors.white,
-                ),
-                child: Text(isActive ? 'Deactivate' : 'Activate'),
-              ),
-            ],
           ),
         ],
       ),
@@ -2343,10 +2945,12 @@ class _CryptoScreenState extends State<CryptoScreen> {
   }
 
   void _showCurrencySelector() {
+    final currencyManager = Provider.of<CurrencyManager>(context, listen: false);
     final currencies = {
       'USD': '\$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'CNY': '¥', 'INR': '₹', 
-      'BTC': '₿', 'ETH': 'Ξ', 'NGN': '₦', 'CAD': '\$', 'AUD': '\$'
+      'NGN': '₦', 'CAD': '\$', 'AUD': '\$', 'BTC': '₿', 'ETH': 'Ξ'
     };
+    
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.grey[900],
@@ -2371,13 +2975,11 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   style: const TextStyle(fontSize: 20, color: Colors.white),
                 ),
                 title: Text(currency.key, style: const TextStyle(color: Colors.white)),
-                trailing: widget.cryptoWallet.selectedCurrency == currency.key
+                trailing: currencyManager.selectedCurrency == currency.key
                     ? const Icon(Icons.check, color: Color(0xFFD4AF37))
                     : null,
                 onTap: () {
-                  setState(() {
-                    widget.cryptoWallet.selectedCurrency = currency.key;
-                  });
+                  currencyManager.setCurrency(currency.key);
                   Navigator.pop(context);
                 },
               )),
@@ -2400,17 +3002,58 @@ class _CryptoScreenState extends State<CryptoScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            SelectableText(
-              address,
-              style: TextStyle(
-                fontFamily: 'Monospace',
-                fontSize: 12,
-                color: Colors.grey.shade300,
+            Container(
+              width: 200,
+              height: 200,
+              color: Colors.white,
+              child: Center(
+                child: Text(
+                  'QR Code\n$address',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.black, fontSize: 10),
+                ),
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: const Color(0xFFD4AF37)),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SelectableText(
+                      address,
+                      style: TextStyle(
+                        fontFamily: 'Monospace',
+                        fontSize: 12,
+                        color: Colors.grey.shade300,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 18),
+                    color: const Color(0xFFD4AF37),
+                    onPressed: () {
+                      Clipboard.setData(ClipboardData(text: address));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Address copied to clipboard'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
             const Text(
-              'TydChronos Ecosystem Wallet Address',
+              'Scan QR code or copy address to receive funds',
               style: TextStyle(color: Colors.grey, fontSize: 12),
               textAlign: TextAlign.center,
             ),
@@ -2442,6 +3085,8 @@ class _EWalletScreenState extends State<EWalletScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currencyManager = Provider.of<CurrencyManager>(context);
+    
     return Scaffold(
       backgroundColor: Colors.black,
       appBar: AppBar(
@@ -2466,7 +3111,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
           ),
         ],
       ),
-      body: _eWalletSelectedIndex == 0 ? _buildWalletTab() : _buildBankingTab(),
+      body: _eWalletSelectedIndex == 0 ? _buildWalletTab(currencyManager) : _buildBankingTab(currencyManager),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.black,
         selectedItemColor: const Color(0xFFD4AF37),
@@ -2486,7 +3131,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
     );
   }
 
-  // NEW: Transfer TydChronos Wallet Dialog for E-Wallet
+  // Transfer TydChronos Wallet Dialog for E-Wallet
   void _showTransferTydChronosDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -2536,7 +3181,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
     );
   }
 
-  Widget _buildWalletTab() {
+  Widget _buildWalletTab(CurrencyManager currencyManager) {
     return BalanceConsumer(
       builder: (context, balanceManager, child) {
         return SingleChildScrollView(
@@ -2554,7 +3199,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
                     const Text('Available Balance', style: TextStyle(color: Colors.grey)),
                     const SizedBox(height: 8),
                     Text(
-                      balanceManager.formatBalance(widget.fiatWallet.balance),
+                      balanceManager.formatBalance(widget.fiatWallet.balance, symbol: currencyManager.currencySymbol),
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -2563,7 +3208,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
                     ),
                     const SizedBox(height: 20),
                     
-                    // NEW: Trio buttons below Available Balance
+                    // Trio buttons below Available Balance
                     Row(
                       children: [
                         Expanded(
@@ -2605,7 +3250,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
               ),
               const SizedBox(height: 20),
               
-              // NEW: Added title for Recent Transactions
+              // Added title for Recent Transactions
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -2643,7 +3288,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        balanceManager.formatBalance(transaction.amount.abs()),
+                        balanceManager.formatBalance(transaction.amount.abs(), symbol: currencyManager.currencySymbol),
                         style: TextStyle(
                           color: transaction.amount > 0 ? Colors.green : Colors.red,
                           fontWeight: FontWeight.bold,
@@ -2664,7 +3309,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
     );
   }
 
-  // NEW: Action Button Widget
+  // Action Button Widget
   Widget _buildActionButton(IconData icon, String label, Color color, VoidCallback onPressed) {
     return ElevatedButton(
       onPressed: onPressed,
@@ -2696,7 +3341,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
     );
   }
 
-  // NEW: Withdraw Dialog
+  // Withdraw Dialog
   void _showWithdrawDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -2744,7 +3389,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
     );
   }
 
-  // NEW: Transfer Bank Dialog
+  // Transfer Bank Dialog
   void _showTransferBankDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -2800,7 +3445,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
     );
   }
 
-  Widget _buildBankingTab() {
+  Widget _buildBankingTab(CurrencyManager currencyManager) {
     return BalanceConsumer(
       builder: (context, balanceManager, child) {
         return DefaultTabController(
@@ -2824,9 +3469,9 @@ class _EWalletScreenState extends State<EWalletScreen> {
             ),
             body: TabBarView(
               children: [
-                _buildAccountsTab(balanceManager),
-                _buildCardsTab(balanceManager),
-                _buildBillsTab(balanceManager),
+                _buildAccountsTab(balanceManager, currencyManager),
+                _buildCardsTab(balanceManager, currencyManager),
+                _buildBillsTab(balanceManager, currencyManager),
               ],
             ),
           ),
@@ -2835,7 +3480,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
     );
   }
 
-  Widget _buildAccountsTab(BalanceVisibilityManager balanceManager) {
+  Widget _buildAccountsTab(BalanceVisibilityManager balanceManager, CurrencyManager currencyManager) {
     return ListView(
       children: [
         ...widget.fiatWallet.accounts.map((account) => Container(
@@ -2851,7 +3496,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(balanceManager.formatBalance(account.balance), style: const TextStyle(color: Colors.white)),
+                Text(balanceManager.formatBalance(account.balance, symbol: currencyManager.currencySymbol), style: const TextStyle(color: Colors.white)),
                 Text(account.type, style: const TextStyle(color: Colors.grey, fontSize: 12)),
               ],
             ),
@@ -2861,7 +3506,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
     );
   }
 
-  Widget _buildCardsTab(BalanceVisibilityManager balanceManager) {
+  Widget _buildCardsTab(BalanceVisibilityManager balanceManager, CurrencyManager currencyManager) {
     return ListView.builder(
       itemCount: widget.fiatWallet.cards.length,
       itemBuilder: (context, index) {
@@ -2887,7 +3532,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
                 const SizedBox(height: 10),
                 Text('Expires ${card.expiry}', style: const TextStyle(color: Colors.black)),
                 const SizedBox(height: 10),
-                Text('Balance: ${balanceManager.formatBalance(card.balance)}', style: const TextStyle(color: Colors.black)),
+                Text('Balance: ${balanceManager.formatBalance(card.balance, symbol: currencyManager.currencySymbol)}', style: const TextStyle(color: Colors.black)),
               ],
             ),
           ),
@@ -2896,7 +3541,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
     );
   }
 
-  Widget _buildBillsTab(BalanceVisibilityManager balanceManager) {
+  Widget _buildBillsTab(BalanceVisibilityManager balanceManager, CurrencyManager currencyManager) {
     return ListView.builder(
       itemCount: widget.fiatWallet.bills.length,
       itemBuilder: (context, index) {
@@ -2914,7 +3559,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(balanceManager.formatBalance(bill.amount), style: const TextStyle(color: Colors.white)),
+                Text(balanceManager.formatBalance(bill.amount, symbol: currencyManager.currencySymbol), style: const TextStyle(color: Colors.white)),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
@@ -2938,6 +3583,8 @@ class SettingsSecurityScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final currencyManager = Provider.of<CurrencyManager>(context);
+    
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -3022,7 +3669,7 @@ class SettingsSecurityScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildSettingsItem('Currency', 'USD', Icons.currency_exchange),
+                _buildSettingsItem('Currency', currencyManager.selectedCurrency, Icons.currency_exchange),
                 _buildSettingsItem('Language', 'English', Icons.language),
                 _buildSettingsItem('Theme', 'Dark', Icons.dark_mode),
               ],
@@ -3054,5 +3701,53 @@ class SettingsSecurityScreen extends StatelessWidget {
       onTap: () {},
     );
   }
-} 
-// Netlify forced rebuild: Thu Oct 23 10:49:20 WAT 2025
+}
+
+// ==================== TRADING CONTROLLER ====================
+class TradingController extends ChangeNotifier {
+  bool _isTradingActive = false;
+  double _tradingBalance = 0.0;
+  
+  bool get isTradingActive => _isTradingActive;
+  double get tradingBalance => _tradingBalance;
+  
+  void toggleTrading() {
+    _isTradingActive = !_isTradingActive;
+    notifyListeners();
+  }
+  
+  void updateTradingBalance(double amount) {
+    _tradingBalance = amount;
+    notifyListeners();
+  }
+}
+
+// ==================== AUTOMATED TRADING SCREEN ====================
+class AutomatedTradingScreen extends StatelessWidget {
+  const AutomatedTradingScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: const Color(0xFFD4AF37),
+        elevation: 0,
+        title: const Text(
+          'AUTOMATED TRADING',
+          style: TextStyle(
+            color: Color(0xFFD4AF37),
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      body: const Center(
+        child: Text(
+          'Automated Trading Dashboard',
+          style: TextStyle(color: Colors.white),
+        ),
+      ),
+    );
+  }
+}

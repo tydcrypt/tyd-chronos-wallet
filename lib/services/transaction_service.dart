@@ -1,6 +1,12 @@
-import 'dart:math';
+// Transaction Service
+// Manages transaction history and operations
 
 class TransactionService {
+  TransactionService() {
+    print("TransactionService initialized");
+  }
+  
+  // Method called by TydChronosEcosystemService
   Future<Map<String, dynamic>> executeTydChronosTransaction({
     required String fromAddress,
     required String toAddress,
@@ -8,89 +14,49 @@ class TransactionService {
     required String symbol,
     bool enableVolatilityProtection = true,
   }) async {
-    print('[Transaction] Executing TydChronos transaction with volatility protection: $enableVolatilityProtection');
+    await Future.delayed(Duration(seconds: 3));
     
-    await Future.delayed(const Duration(seconds: 2));
+    final txHash = '0x${DateTime.now().millisecondsSinceEpoch.toRadixString(16)}${toAddress.substring(2, 10)}';
     
-    final random = Random();
-    final txHash = '0x${List.generate(64, (_) => random.nextInt(16).toRadixString(16)).join()}';
-    
-    final protectedAmount = enableVolatilityProtection ? _applyVolatilityProtection(amount, symbol) : amount;
+    print("TydChronos transaction executed:");
+    print("  From: $fromAddress");
+    print("  To: $toAddress");
+    print("  Amount: $amount $symbol");
+    print("  Protection: $enableVolatilityProtection");
+    print("  TX Hash: $txHash");
     
     return {
-      'success': true,
       'txHash': txHash,
+      'status': 'confirmed',
+      'timestamp': DateTime.now().toString(),
+      'amount': amount,
+      'symbol': symbol,
       'from': fromAddress,
       'to': toAddress,
-      'originalAmount': amount,
-      'protectedAmount': protectedAmount,
-      'symbol': symbol,
-      'timestamp': DateTime.now().toIso8601String(),
-      'volatilityProtection': enableVolatilityProtection,
-      'protectionActive': enableVolatilityProtection,
-      'gasUsed': '21000',
-      'gasPrice': '0.000000025',
-      'network': 'TydChronos Ecosystem',
+      'volatilityProtected': enableVolatilityProtection
     };
   }
   
-  double _applyVolatilityProtection(double amount, String symbol) {
-    print('[VolatilityProtection] Applying protection for $symbol amount: $amount');
-    
-    final lockedPrice = _getCurrentPrice(symbol);
-    final protectedAmount = amount * lockedPrice;
-    
-    print('[VolatilityProtection] Amount locked at price: $lockedPrice');
-    return protectedAmount;
-  }
-  
-  double _getCurrentPrice(String symbol) {
-    final prices = {
-      'ETH': 3000.0,
-      'BTC': 45000.0,
-      'ARB': 1.5,
-      'MATIC': 0.8,
-    };
-    
-    return prices[symbol] ?? 1.0;
-  }
-  
+  // Additional utility methods
   Future<List<Map<String, dynamic>>> getTransactionHistory(String address) async {
+    await Future.delayed(Duration(milliseconds: 300));
     return [
       {
-        'hash': '0x1234...5678',
-        'from': address,
-        'to': '0xTydChronosDApp',
-        'amount': 0.01,
+        'hash': '0x1234567890abcdef',
+        'type': 'send',
+        'amount': -0.1,
         'symbol': 'ETH',
-        'timestamp': DateTime.now().subtract(const Duration(hours: 1)).toIso8601String(),
-        'status': 'confirmed',
-        'volatilityProtected': true,
-        'protectionStatus': 'completed',
+        'timestamp': DateTime.now().subtract(Duration(hours: 1)).toString(),
+        'status': 'confirmed'
       },
       {
-        'hash': '0xabcd...efgh',
-        'from': '0xTydChronosArbitrage',
-        'to': address,
+        'hash': '0xabcdef1234567890',
+        'type': 'receive',
         'amount': 0.5,
         'symbol': 'ETH',
-        'timestamp': DateTime.now().subtract(const Duration(days: 1)).toIso8601String(),
-        'status': 'confirmed',
-        'volatilityProtected': false,
-        'protectionStatus': 'n/a',
-      },
+        'timestamp': DateTime.now().subtract(Duration(days: 1)).toString(),
+        'status': 'confirmed'
+      }
     ];
-  }
-  
-  Future<Map<String, dynamic>> getVolatilityProtectionStatus(String txHash) async {
-    await Future.delayed(const Duration(seconds: 1));
-    
-    return {
-      'txHash': txHash,
-      'protectionActive': true,
-      'lockedPrice': 3000.0,
-      'completionTime': DateTime.now().add(const Duration(minutes: 5)).toIso8601String(),
-      'estimatedSavings': 15.50,
-    };
   }
 }

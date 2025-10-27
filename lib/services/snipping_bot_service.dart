@@ -1,100 +1,65 @@
-import 'dart:math';
+// Snipping Bot Service
+// Handles automated trading and market sniping
 
 class SnippingBotService {
-  Map<String, bool> _activeBots = {};
-  Map<String, dynamic> _botPerformance = {};
-
-  Future<void> initialize(String walletAddress) async {
-    print('[SnippingBot] Initializing bots for wallet: $walletAddress');
-    await Future.delayed(const Duration(seconds: 1));
-    
-    _activeBots = {
-      'arbitrage': false,
-      'liquidity': false,
-      'market_making': false,
-    };
-    
-    _botPerformance = {
-      'totalTrades': 0,
-      'successRate': 0.0,
-      'totalProfit': 0.0,
-      'activeBots': 0,
-    };
+  SnippingBotService() {
+    print("SnippingBotService initialized");
   }
-
+  
+  // Method called by TydChronosEcosystemService
+  Future<void> initialize(String address) async {
+    await Future.delayed(Duration(milliseconds: 200));
+    print("Snipping bots initialized for: $address");
+  }
+  
+  // Method called by TydChronosEcosystemService
   Future<Map<String, dynamic>> activateArbitrageBot() async {
-    print('[SnippingBot] Activating Arbitrage Bot...');
-    await Future.delayed(const Duration(seconds: 2));
-    
-    _activeBots['arbitrage'] = true;
-    
+    await Future.delayed(Duration(seconds: 2));
+    print("Arbitrage bot activated");
     return {
-      'success': true,
-      'botType': 'arbitrage',
-      'contractAddress': '0xTydChronosArbitrageContract',
-      'activationTime': DateTime.now().toIso8601String(),
-      'status': 'monitoring',
+      'contractAddress': '0xArbitrageContract123',
+      'status': 'active',
+      'startTime': DateTime.now().toString()
     };
   }
-
+  
+  // Method called by TydChronosEcosystemService
   Future<Map<String, dynamic>> activateLiquidityBot() async {
-    print('[SnippingBot] Activating Liquidity Bot...');
-    await Future.delayed(const Duration(seconds: 2));
-    
-    _activeBots['liquidity'] = true;
-    
+    await Future.delayed(Duration(seconds: 2));
+    print("Liquidity bot activated");
     return {
-      'success': true,
-      'botType': 'liquidity',
-      'contractAddress': '0xTydChronosLiquidityContract',
-      'activationTime': DateTime.now().toIso8601String(),
-      'status': 'providing_liquidity',
+      'contractAddress': '0xLiquidityContract456',
+      'status': 'active',
+      'startTime': DateTime.now().toString()
     };
   }
-
+  
+  // Method called by TydChronosEcosystemService
   Future<Map<String, dynamic>> activateMarketMakingBot() async {
-    print('[SnippingBot] Activating Market Making Bot...');
-    await Future.delayed(const Duration(seconds: 2));
-    
-    _activeBots['market_making'] = true;
-    
+    await Future.delayed(Duration(seconds: 2));
+    print("Market making bot activated");
     return {
-      'success': true,
-      'botType': 'market_making',
-      'contractAddress': '0xTydChronosMarketMakingContract',
-      'activationTime': DateTime.now().toIso8601String(),
-      'status': 'market_making',
+      'contractAddress': '0xMarketMakingContract789',
+      'status': 'active',
+      'startTime': DateTime.now().toString()
     };
   }
-
+  
+  // Method called by TydChronosEcosystemService
   Future<void> deactivateAllBots() async {
-    print('[SnippingBot] Deactivating all bots...');
-    await Future.delayed(const Duration(seconds: 1));
-    
-    _activeBots.updateAll((key, value) => false);
+    await Future.delayed(Duration(seconds: 1));
+    print("All snipping bots deactivated");
   }
-
+  
+  // Method called by TydChronosEcosystemService
   Future<Map<String, dynamic>> getBotPerformance() async {
-    final random = Random();
-    
-    _botPerformance = {
-      'totalTrades': random.nextInt(1000),
-      'successRate': (random.nextDouble() * 30 + 70).toStringAsFixed(1),
-      'totalProfit': (random.nextDouble() * 5000 + 1000).toStringAsFixed(2),
-      'activeBots': _activeBots.values.where((active) => active).length,
-      'arbitrageTrades': random.nextInt(500),
-      'liquidityFees': (random.nextDouble() * 1000).toStringAsFixed(2),
-      'marketMakingProfit': (random.nextDouble() * 2000).toStringAsFixed(2),
+    await Future.delayed(Duration(milliseconds: 500));
+    return {
+      'totalTrades': 156,
+      'successRate': 78.5,
+      'totalProfit': 1250.75,
+      'activeBots': 3,
+      'performance': 'excellent'
     };
-    
-    return _botPerformance;
-  }
-
-  bool isBotActive(String botType) {
-    return _activeBots[botType] ?? false;
-  }
-
-  Map<String, bool> getActiveBots() {
-    return Map.from(_activeBots);
   }
 }

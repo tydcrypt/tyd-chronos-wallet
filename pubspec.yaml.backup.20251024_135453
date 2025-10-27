@@ -1,0 +1,39 @@
+name: tyd_chronos_wallet
+description: TydChronos Advanced Banking & Cryptocurrency Platform
+
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.1
+  shared_preferences: ^2.2.2
+  http: ^1.1.0
+  web3dart: ^2.7.3
+  bip39: ^1.0.6
+  web_socket_channel: ^2.4.0
+  pointycastle: ^3.7.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.13.1
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/icon/
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/icon.png"
+  min_sdk_android: 21

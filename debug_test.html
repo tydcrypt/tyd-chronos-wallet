@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>Debugging TydChronos Wallet</h1>
+    <div id="status">Loading...</div>
+    <script src="flutter.js"></script>
+    <script>
+        console.log("Testing Flutter initialization...");
+        
+        window.addEventListener('load', function(ev) {
+            console.log("Page loaded, initializing Flutter...");
+            
+            try {
+                flutter.loadEntrypoint({
+                    serviceWorker: {
+                        serviceWorkerVersion: null,
+                    },
+                }).then(function(engineInitializer) {
+                    console.log("Flutter engine initializer ready");
+                    return engineInitializer.initializeEngine();
+                }).then(function(appRunner) {
+                    console.log("Flutter engine initialized, running app...");
+                    return appRunner.runApp();
+                }).catch(function(error) {
+                    console.error("Flutter initialization failed:", error);
+                    document.getElementById('status').innerHTML = "Error: " + error.toString();
+                });
+            } catch (error) {
+                console.error("Error during Flutter setup:", error);
+                document.getElementById('status').innerHTML = "Setup Error: " + error.toString();
+            }
+        });
+    </script>
+</body>
+</html>
