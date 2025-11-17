@@ -46,3 +46,36 @@ app.*.map.json
 node_modules
 /flutter/
 .env
+
+# Development files
+*.txt
+*.backup
+*.backup*
+temp_*
+*_check.txt
+*_analysis.txt
+*_errors.txt
+*_log.txt
+
+# Temporary scripts
+*.sh
+*.py
+*.patch
+
+# Test files
+/test/
+lib/*_test.dart
+lib/beta_test.dart
+lib/minimal_test.dart
+lib/ultra_test.dart
+lib/bypass_splash.dart
+lib/launch_diagnostic.dart
+
+# Backup files
+lib/main.dart.backup_*
+pubspec.yaml.backup*
+web/index.html.backup*
+
+# Documentation (unless you want to keep)
+ESTIMATEGAS_FIX_SUMMARY.md
+PRECISE_INTEGRATION_GUIDE.md
