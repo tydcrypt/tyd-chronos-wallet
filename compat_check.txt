@@ -1,8 +1,0 @@
-Analyzing web3dart_compat.dart...
-
-  error - web3dart_compat.dart:83:24 - 'CustomCredentials.signToEcSignature' ('Future<MsgSignature> Function(Uint8List, {int? chainId, bool isEIP1559})') isn't a valid override of 'Credentials.signToEcSignature' ('MsgSignature Function(Uint8List, {int? chainId, bool isEIP1559})'). - invalid_override
-           - The member being overridden at web3dart_compat.dart:110:24.
-warning - web3dart_compat.dart:70:28 - The getter doesn't override an inherited getter. Try updating this class to match the superclass, or removing the override annotation. - override_on_non_overriding_member
-   info - web3dart_compat.dart:20:43 - 'signPersonalMessage' is deprecated and shouldn't be used. Please use [signPersonalMessageToUint8List]. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
-
-3 issues found.
