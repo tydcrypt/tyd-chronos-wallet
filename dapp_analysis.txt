@@ -1,0 +1,90 @@
+Analyzing dapp_bridge_service.dart...
+
+  error - dapp_bridge_service.dart:221:5 - The method '_initialize' isn't defined for the type 'DAppBridgeService'. Try correcting the name to the name of an existing method, or defining a method named '_initialize'. - undefined_method
+  error - dapp_bridge_service.dart:226:8 - Expected to find ';'. - expected_token
+  error - dapp_bridge_service.dart:226:33 - Functions must have an explicit list of parameters. Try adding a parameter list. - missing_function_parameters
+  error - dapp_bridge_service.dart:227:3 - Conditions must have a static type of 'bool'. Try changing the condition. - non_bool_condition
+  error - dapp_bridge_service.dart:227:11 - The non-nullable local variable 'get' must be assigned before it can be used. Try giving it an initializer expression, or ensure that it's assigned on every execution path. - not_assigned_potentially_non_nullable_local_variable
+  error - dapp_bridge_service.dart:227:15 - Expected to find ':'. - expected_token
+  error - dapp_bridge_service.dart:227:15 - Expected to find ';'. - expected_token
+  error - dapp_bridge_service.dart:227:15 - Undefined name 'connectedDApp'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - dapp_bridge_service.dart:227:29 - Expected an identifier. - missing_identifier
+  error - dapp_bridge_service.dart:227:29 - Expected to find ';'. - expected_token
+  error - dapp_bridge_service.dart:244:5 - Undefined name '_webSocketChannel'. Try correcting the name to one that is defined, or defining the name. - undefined_identifier
+  error - dapp_bridge_service.dart:248:35 - The name '_instance' is already defined. Try renaming one of the declarations. - duplicate_definition
+           - The first definition of this name at dapp_bridge_service.dart:217:34.
+  error - dapp_bridge_service.dart:314:11 - The unnamed constructor is already defined. Try giving one of the constructors a name. - duplicate_constructor
+  error - dapp_bridge_service.dart:315:3 - The constructor with name '_internal' is already defined. Try renaming one of the constructors. - duplicate_constructor
+  error - dapp_bridge_service.dart:541:5 - Too many positional arguments: 0 expected, but 1 found. Try removing the extra arguments. - extra_positional_arguments
+  error - dapp_bridge_service.dart:544:7 - Expected to find ')'. - expected_token
+  error - dapp_bridge_service.dart:553:9 - Local variable '_handleNewBlock' can't be referenced before it is declared. Try moving the declaration to before the first use, or renaming the local variable so that it doesn't hide a name from an enclosing scope. - referenced_before_declaration
+           - The declaration of '_handleNewBlock' is here at dapp_bridge_service.dart:567:8.
+  error - dapp_bridge_service.dart:556:9 - Local variable '_handleNewLogs' can't be referenced before it is declared. Try moving the declaration to before the first use, or renaming the local variable so that it doesn't hide a name from an enclosing scope. - referenced_before_declaration
+           - The declaration of '_handleNewLogs' is here at dapp_bridge_service.dart:580:8.
+  error - dapp_bridge_service.dart:559:9 - Local variable '_handlePendingTransaction' can't be referenced before it is declared. Try moving the declaration to before the first use, or renaming the local variable so that it doesn't hide a name from an enclosing scope. - referenced_before_declaration
+           - The declaration of '_handlePendingTransaction' is here at dapp_bridge_service.dart:595:8.
+  error - dapp_bridge_service.dart:562:9 - Local variable '_handleCustomEvent' can't be referenced before it is declared. Try moving the declaration to before the first use, or renaming the local variable so that it doesn't hide a name from an enclosing scope. - referenced_before_declaration
+           - The declaration of '_handleCustomEvent' is here at dapp_bridge_service.dart:609:8.
+  error - dapp_bridge_service.dart:572:9 - The argument for the named parameter 'timestamp' was already specified. Try removing one of the named arguments, or correcting one of the names to reference a different named parameter. - duplicate_named_argument
+  error - dapp_bridge_service.dart:667:13 - The argument type 'String' can't be assigned to the parameter type 'EthereumAddress?'.  - argument_type_not_assignable
+  error - dapp_bridge_service.dart:668:16 - The argument type 'BigInt' can't be assigned to the parameter type 'EtherAmount?'.  - argument_type_not_assignable
+  error - dapp_bridge_service.dart:669:15 - The argument type 'String?' can't be assigned to the parameter type 'Uint8List?'.  - argument_type_not_assignable
+  error - dapp_bridge_service.dart:670:9 - The named parameter 'gasLimit' isn't defined. Try correcting the name to an existing named parameter's name, or defining a named parameter with the name 'gasLimit'. - undefined_named_parameter
+  error - dapp_bridge_service.dart:671:19 - The argument type 'BigInt?' can't be assigned to the parameter type 'EtherAmount?'.  - argument_type_not_assignable
+  error - dapp_bridge_service.dart:672:23 - The argument type 'BigInt?' can't be assigned to the parameter type 'EtherAmount?'.  - argument_type_not_assignable
+  error - dapp_bridge_service.dart:673:31 - The argument type 'BigInt?' can't be assigned to the parameter type 'EtherAmount?'.  - argument_type_not_assignable
+  error - dapp_bridge_service.dart:708:9 - 3 positional arguments expected by 'signPersonalMessage', but 0 found. Try adding the missing arguments. - not_enough_positional_arguments
+  error - dapp_bridge_service.dart:708:9 - The named parameter 'client' isn't defined. Try correcting the name to an existing named parameter's name, or defining a named parameter with the name 'client'. - undefined_named_parameter
+  error - dapp_bridge_service.dart:709:9 - The named parameter 'address' isn't defined. Try correcting the name to an existing named parameter's name, or defining a named parameter with the name 'address'. - undefined_named_parameter
+  error - dapp_bridge_service.dart:710:9 - The named parameter 'message' isn't defined. Try correcting the name to an existing named parameter's name, or defining a named parameter with the name 'message'. - undefined_named_parameter
+  error - dapp_bridge_service.dart:823:13 - The argument type 'String' can't be assigned to the parameter type 'EthereumAddress?'.  - argument_type_not_assignable
+  error - dapp_bridge_service.dart:824:16 - The argument type 'BigInt' can't be assigned to the parameter type 'EtherAmount?'.  - argument_type_not_assignable
+  error - dapp_bridge_service.dart:825:15 - The argument type 'String?' can't be assigned to the parameter type 'Uint8List?'.  - argument_type_not_assignable
+  error - dapp_bridge_service.dart:830:9 - The named parameter 'transaction' isn't defined. Try correcting the name to an existing named parameter's name, or defining a named parameter with the name 'transaction'. - undefined_named_parameter
+  error - dapp_bridge_service.dart:934:17 - Expected to find ';'. - expected_token
+  error - dapp_bridge_service.dart:934:37 - Functions must have an explicit list of parameters. Try adding a parameter list. - missing_function_parameters
+  error - dapp_bridge_service.dart:946:1 - Expected to find '}'. - expected_token
+warning - dapp_bridge_service.dart:9:8 - Unused import: 'package:crypto/crypto.dart'. Try removing the import directive. - unused_import
+warning - dapp_bridge_service.dart:12:8 - Unused import: 'package:web3dart/web3dart.dart'. Try removing the import directive. - unused_import
+warning - dapp_bridge_service.dart:13:8 - Unused import: 'package:convert/convert.dart'. Try removing the import directive. - unused_import
+warning - dapp_bridge_service.dart:250:11 - The value of the local variable 'prefs' isn't used. Try removing the variable or using it. - unused_local_variable
+warning - dapp_bridge_service.dart:934:17 - The value of the local variable 'get' isn't used. Try removing the variable or using it. - unused_local_variable
+   info - dapp_bridge_service.dart:226:12 - The declaration 'hasPendingConnection' isn't referenced. Try removing the declaration of 'hasPendingConnection'. - unused_element
+   info - dapp_bridge_service.dart:229:8 - The declaration 'setPendingConnection' isn't referenced. Try removing the declaration of 'setPendingConnection'. - unused_element
+   info - dapp_bridge_service.dart:235:8 - The declaration 'setConnectedDApp' isn't referenced. Try removing the declaration of 'setConnectedDApp'. - unused_element
+   info - dapp_bridge_service.dart:242:8 - The declaration 'dispose' isn't referenced. Try removing the declaration of 'dispose'. - unused_element
+   info - dapp_bridge_service.dart:264:11 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - dapp_bridge_service.dart:309:11 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - dapp_bridge_service.dart:319:17 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - dapp_bridge_service.dart:327:16 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - dapp_bridge_service.dart:335:17 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - dapp_bridge_service.dart:343:17 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - dapp_bridge_service.dart:351:19 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - dapp_bridge_service.dart:361:13 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - dapp_bridge_service.dart:369:23 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - dapp_bridge_service.dart:451:10 - The declaration '_handleNewBlock' isn't referenced. Try removing the declaration of '_handleNewBlock'. - unused_element
+   info - dapp_bridge_service.dart:461:10 - The declaration '_handleNewLogs' isn't referenced. Try removing the declaration of '_handleNewLogs'. - unused_element
+   info - dapp_bridge_service.dart:469:10 - The declaration '_handlePendingTransaction' isn't referenced. Try removing the declaration of '_handlePendingTransaction'. - unused_element
+   info - dapp_bridge_service.dart:478:10 - The declaration '_handleCustomEvent' isn't referenced. Try removing the declaration of '_handleCustomEvent'. - unused_element
+   info - dapp_bridge_service.dart:507:11 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - dapp_bridge_service.dart:532:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - dapp_bridge_service.dart:548:8 - The declaration '_handleWebSocketEvent' isn't referenced. Try removing the declaration of '_handleWebSocketEvent'. - unused_element
+   info - dapp_bridge_service.dart:617:8 - The declaration 'setCurrentAccount' isn't referenced. Try removing the declaration of 'setCurrentAccount'. - unused_element
+   info - dapp_bridge_service.dart:629:16 - The declaration '_loadSavedSession' isn't referenced. Try removing the declaration of '_loadSavedSession'. - unused_element
+   info - dapp_bridge_service.dart:642:9 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - dapp_bridge_service.dart:648:18 - The declaration 'sendTransaction' isn't referenced. Try removing the declaration of 'sendTransaction'. - unused_element
+   info - dapp_bridge_service.dart:701:18 - The declaration 'signMessage' isn't referenced. Try removing the declaration of 'signMessage'. - unused_element
+   info - dapp_bridge_service.dart:730:25 - The declaration 'callContract' isn't referenced. Try removing the declaration of 'callContract'. - unused_element
+   info - dapp_bridge_service.dart:763:18 - The declaration 'getBalance' isn't referenced. Try removing the declaration of 'getBalance'. - unused_element
+   info - dapp_bridge_service.dart:786:15 - The declaration 'getTransactionCount' isn't referenced. Try removing the declaration of 'getTransactionCount'. - unused_element
+   info - dapp_bridge_service.dart:808:18 - The declaration 'estimateGas' isn't referenced. Try removing the declaration of 'estimateGas'. - unused_element
+   info - dapp_bridge_service.dart:842:18 - The declaration 'getGasPrice' isn't referenced. Try removing the declaration of 'getGasPrice'. - unused_element
+   info - dapp_bridge_service.dart:860:18 - The declaration 'getBlockNumber' isn't referenced. Try removing the declaration of 'getBlockNumber'. - unused_element
+   info - dapp_bridge_service.dart:878:31 - The declaration 'getTransactionReceipt' isn't referenced. Try removing the declaration of 'getTransactionReceipt'. - unused_element
+   info - dapp_bridge_service.dart:895:16 - The declaration 'addToken' isn't referenced. Try removing the declaration of 'addToken'. - unused_element
+   info - dapp_bridge_service.dart:924:23 - The declaration 'getSupportedNetworks' isn't referenced. Try removing the declaration of 'getSupportedNetworks'. - unused_element
+   info - dapp_bridge_service.dart:929:8 - The declaration 'isL2Network' isn't referenced. Try removing the declaration of 'isL2Network'. - unused_element
+   info - dapp_bridge_service.dart:934:21 - The declaration 'zkSyncEraConfig' isn't referenced. Try removing the declaration of 'zkSyncEraConfig'. - unused_element
+   info - dapp_bridge_service.dart:937:16 - The declaration 'dispose' isn't referenced. Try removing the declaration of 'dispose'. - unused_element
+
+81 issues found.

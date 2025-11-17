@@ -1,5 +1,5 @@
 name: tydchronos_wallet
-description: TydChronos Advanced Crypto Wallet and E-wallet
+description: TydChronos Advanced Web3 Wallet
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,14 +9,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Use compatible web3dart version
   web3dart: ^2.7.3
-  logger: ^2.0.0
   http: ^1.1.0
   web_socket_channel: ^3.0.0
   shared_preferences: ^2.2.2
   url_launcher: ^6.1.11
   crypto: ^3.0.3
   encrypt: ^5.0.1
+  # Use available bip39 version
   bip39: ^1.0.6
   bip32: ^2.0.0
   provider: ^6.1.1
@@ -29,8 +30,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  
-  # Use specific file paths only
-  assets:
-    - assets/images/logo.png
-    - assets/icon/icon.png

@@ -1,0 +1,104 @@
+Analyzing main.dart...
+
+  error - main.dart:577:16 - The constructor being called isn't a const constructor. Try removing 'const' from the constructor invocation. - const_with_non_const
+  error - main.dart:621:19 - The name 'SplashScreen' isn't a class. Try correcting the name to match an existing class. - creation_with_non_type
+  error - main.dart:622:40 - Expected to find ';'. - expected_token
+  error - main.dart:623:5 - Expected to find ')'. - expected_token
+  error - main.dart:623:7 - Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it. - expected_executable
+  error - main.dart:624:7 - Expected to find ';'. - expected_token
+  error - main.dart:624:7 - Variables must be declared using the keywords 'const', 'final', 'var' or a type name. Try adding the name of the type of the variable or the keyword 'var'. - missing_const_final_var_or_type
+  error - main.dart:624:12 - Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it. - expected_executable
+  error - main.dart:624:14 - Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it. - expected_executable
+  error - main.dart:624:33 - Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it. - expected_executable
+  error - main.dart:625:7 - Expected to find ';'. - expected_token
+  error - main.dart:625:7 - Variables must be declared using the keywords 'const', 'final', 'var' or a type name. Try adding the name of the type of the variable or the keyword 'var'. - missing_const_final_var_or_type
+  error - main.dart:625:12 - Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it. - expected_executable
+  error - main.dart:625:36 - A function body must be provided. Try adding a function body. - missing_function_body
+  error - main.dart:625:36 - Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it. - expected_executable
+  error - main.dart:626:7 - Expected to find ';'. - expected_token
+  error - main.dart:626:7 - Variables must be declared using the keywords 'const', 'final', 'var' or a type name. Try adding the name of the type of the variable or the keyword 'var'. - missing_const_final_var_or_type
+  error - main.dart:626:11 - Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it. - expected_executable
+  error - main.dart:626:13 - Can't have modifier 'const' here. Try removing 'const'. - extraneous_modifier
+  error - main.dart:626:33 - A function body must be provided. Try adding a function body. - missing_function_body
+  error - main.dart:626:33 - Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it. - expected_executable
+  error - main.dart:627:7 - Expected to find ';'. - expected_token
+  error - main.dart:627:7 - Variables must be declared using the keywords 'const', 'final', 'var' or a type name. Try adding the name of the type of the variable or the keyword 'var'. - missing_const_final_var_or_type
+  error - main.dart:627:33 - Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it. - expected_executable
+  error - main.dart:627:35 - 'false' can't be used as an identifier because it's a keyword. Try renaming this to be an identifier that isn't a keyword. - expected_identifier_but_got_keyword
+  error - main.dart:627:35 - Variables must be declared using the keywords 'const', 'final', 'var' or a type name. Try adding the name of the type of the variable or the keyword 'var'. - missing_const_final_var_or_type
+  error - main.dart:628:5 - Expected an identifier. - missing_identifier
+  error - main.dart:629:3 - Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it. - expected_executable
+  error - main.dart:631:13 - The name '_buildBlackGoldTheme' is already defined. Try renaming one of the declarations. - duplicate_definition
+           - The first definition of this name at main.dart:625:14.
+  error - main.dart:656:1 - Expected a method, getter, setter or operator declaration. This appears to be incomplete code. Try removing it or completing it. - expected_executable
+  error - main.dart:723:7 - The name 'SplashScreen' is already defined. Try renaming one of the declarations. - duplicate_definition
+           - The first definition of this name at main.dart:626:19.
+  error - main.dart:727:9 - The name 'SplashScreen' isn't a type, so it can't be used as a type argument. Try correcting the name to an existing type, or defining a type named 'SplashScreen'. - non_type_as_type_argument
+  error - main.dart:727:23 - 'SplashScreen.createState' ('State<dynamic> Function()') isn't a valid override of 'StatefulWidget.createState' ('State<StatefulWidget> Function()'). - invalid_override
+           - The member being overridden at main.dart:1091:26.
+  error - main.dart:730:40 - The name 'SplashScreen' isn't a type, so it can't be used as a type argument. Try correcting the name to an existing type, or defining a type named 'SplashScreen'. - non_type_as_type_argument
+  error - main.dart:3767:38 - The name 'MyHomePage' isn't a type, so it can't be used as a type argument. Try correcting the name to an existing type, or defining a type named 'MyHomePage'. - non_type_as_type_argument
+  error - main.dart:3780:43 - The getter 'hasPendingConnection' isn't defined for the type 'DAppBridgeService'. Try importing the library that defines 'hasPendingConnection', correcting the name to the name of an existing getter, or defining a getter or field named 'hasPendingConnection'. - undefined_getter
+  error - main.dart:3783:21 - The getter 'connectedDApp' isn't defined for the type 'DAppBridgeService'. Try importing the library that defines 'connectedDApp', correcting the name to the name of an existing getter, or defining a getter or field named 'connectedDApp'. - undefined_getter
+  error - main.dart:3785:49 - The getter 'connectedDApp' isn't defined for the type 'DAppBridgeService'. Try importing the library that defines 'connectedDApp', correcting the name to the name of an existing getter, or defining a getter or field named 'connectedDApp'. - undefined_getter
+  error - main.dart:3801:7 - Expected an identifier. - missing_identifier
+  error - main.dart:3801:7 - Expected to find ')'. - expected_token
+warning - main.dart:8:8 - Unused import: 'services/currency_service.dart'. Try removing the import directive. - unused_import
+warning - main.dart:14:8 - Duplicate import. Try removing all but one import of the library. - duplicate_import
+warning - main.dart:16:8 - Unused import: 'features/automated_trading/automated_trading.dart'. Try removing the import directive. - unused_import
+warning - main.dart:3769:8 - The value of the field '_showConnectionDialog' isn't used. Try removing the field, or using it. - unused_field
+warning - main.dart:3772:8 - This method overrides a method annotated as '@mustCallSuper' in 'State', but doesn't invoke the overridden method. - must_call_super
+   info - main.dart:24:23 - The private field _lockedValues could be 'final'. Try making the field 'final'. - prefer_final_fields
+   info - main.dart:67:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:119:24 - The private field _bot1Performance could be 'final'. Try making the field 'final'. - prefer_final_fields
+   info - main.dart:126:24 - The private field _bot2Performance could be 'final'. Try making the field 'final'. - prefer_final_fields
+   info - main.dart:133:24 - The private field _bot3Performance could be 'final'. Try making the field 'final'. - prefer_final_fields
+   info - main.dart:160:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:168:9 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:175:11 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:178:9 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:189:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:192:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:198:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:211:9 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:218:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:312:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:315:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:328:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:348:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:354:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:361:5 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:501:11 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:545:3 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:555:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:557:7 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:561:3 - Don't invoke 'print' in production code. Try using a logging framework. - avoid_print
+   info - main.dart:586:7 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:587:15 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:588:17 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:589:20 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:591:25 - Use 'const' literals as arguments to constructors of '@immutable' classes. Try adding 'const' before the literal. - prefer_const_literals_to_create_immutables
+   info - main.dart:592:17 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:593:17 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:594:17 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:596:26 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:598:17 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:599:17 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:601:26 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:751:12 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:753:13 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:754:16 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:756:21 - Use 'const' literals as arguments to constructors of '@immutable' classes. Try adding 'const' before the literal. - prefer_const_literals_to_create_immutables
+   info - main.dart:962:22 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:964:22 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:1068:16 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:1218:36 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:1327:21 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:1328:33 - Use 'const' literals as arguments to constructors of '@immutable' classes. Try adding 'const' before the literal. - prefer_const_literals_to_create_immutables
+   info - main.dart:2301:31 - 'MaterialStateProperty' is deprecated and shouldn't be used. Use WidgetStateProperty instead. Moved to the Widgets layer to make code available outside of Material. This feature was deprecated after v3.19.0-0.3.pre. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - main.dart:2411:20 - Use 'const' with the constructor to improve performance. Try adding the 'const' keyword to the constructor invocation. - prefer_const_constructors
+   info - main.dart:2412:25 - Use 'const' literals as arguments to constructors of '@immutable' classes. Try adding 'const' before the literal. - prefer_const_literals_to_create_immutables
+   info - main.dart:3699:21 - 'MaterialStateProperty' is deprecated and shouldn't be used. Use WidgetStateProperty instead. Moved to the Widgets layer to make code available outside of Material. This feature was deprecated after v3.19.0-0.3.pre. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+   info - main.dart:3767:7 - The declaration '_MyHomePageState' isn't referenced. Try removing the declaration of '_MyHomePageState'. - unused_element
+
+97 issues found.

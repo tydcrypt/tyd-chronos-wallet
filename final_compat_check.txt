@@ -1,0 +1,6 @@
+Analyzing web3dart_compat.dart...
+
+warning - web3dart_compat.dart:70:28 - The getter doesn't override an inherited getter. Try updating this class to match the superclass, or removing the override annotation. - override_on_non_overriding_member
+   info - web3dart_compat.dart:20:43 - 'signPersonalMessage' is deprecated and shouldn't be used. Please use [signPersonalMessageToUint8List]. Try replacing the use of the deprecated member with the replacement. - deprecated_member_use
+
+2 issues found.

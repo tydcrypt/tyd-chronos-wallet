@@ -1,5 +1,4 @@
 import 'dart:developer';
-import 'dart:js' as js;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
@@ -7,12 +6,12 @@ import 'package:bip39/bip39.dart' as bip39;
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'services/ethereum_service.dart';
-import 'package:web3dart/web3dart.dart';
 import 'services/currency_service.dart';
 import 'services/price_feed_service.dart';
 import 'services/transaction_service.dart';
 import 'services/backend_api_service.dart';
 import 'services/security_service.dart';
+import 'services/dapp_integration_simple.dart';
 import 'services/dapp_integration_simple.dart';
 import 'services/snipping_bot_service.dart';
 import 'features/automated_trading/automated_trading.dart';
@@ -197,11 +196,6 @@ class TydChronosEcosystemService extends ChangeNotifier {
   
   // Web-compatible initialization that doesn't block app startup
   void initializeWeb() {
-    print('[TydChronos] WEB: Ultra-fast initialization - skipping all blockchain');
-    _ethereumAddress = 'web_demo_mode';
-    // Mark services as ready immediately
-    notifyListeners();
-    
     try {
       print('[TydChronos] Web-compatible initialization started');
       // Initialize in background without blocking the app
@@ -655,6 +649,7 @@ class TydChronosWalletApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      
       title: 'TydChronos Wallet',
       theme: _buildBlackGoldTheme(),
       home: const SplashScreen(),
@@ -762,124 +757,65 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  bool _initialized = false;
-  bool _navigationCompleted = false;
-
   @override
   void initState() {
     super.initState();
-    print('🔄 SplashScreen initState called');
     _initializeApp();
   }
 
   Future<void> _initializeApp() async {
-    try {
-      print('🔄 Starting app initialization...');
-      
-      // Initialize network mode manager
-      final networkMode = Provider.of<NetworkModeManager>(context, listen: false);
-      await networkMode.fetchLivePrices();
-      
-      setState(() {
-        _initialized = true;
-      });
-      
-      print('✅ App initialization completed, waiting 3 seconds...');
-      
-      // Wait for 3 seconds and then navigate
-      await Future.delayed(const Duration(seconds: 3));
-      
-      if (mounted && !_navigationCompleted) {
-        _navigationCompleted = true;
-        print('🚀 Navigating to TydChronosHomePage...');
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const TydChronosHomePage()),
-        );
-      } else {
-        print('⚠️ Navigation skipped: mounted=$mounted, navigationCompleted=$_navigationCompleted');
-      }
-    } catch (e) {
-      print('❌ Error during splash screen initialization: $e');
-      // Even if there's an error, navigate to home page after delay
-      if (mounted && !_navigationCompleted) {
-        _navigationCompleted = true;
-        await Future.delayed(const Duration(seconds: 3));
-        print('🚀 Emergency navigation to TydChronosHomePage...');
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const TydChronosHomePage()),
-        );
-      }
-    }
+    final networkMode = Provider.of<NetworkModeManager>(context, listen: false);
+    await networkMode.fetchLivePrices();
+    
+    Timer(const Duration(seconds: 3), () {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const TydChronosHomePage()),
+      );
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    print('🔄 Building SplashScreen, initialized: $_initialized');
-    
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SingleChildScrollView(
-        child: Container(
-          constraints: BoxConstraints(
-            minHeight: MediaQuery.of(context).size.height,
-          ),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 20.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const TydChronosLogo(size: 150, withBackground: true, isAppBarIcon: false),
-                  const SizedBox(height: 30),
-                  _initialized 
-                      ? const Icon(Icons.check_circle, color: Colors.green, size: 30)
-                      : const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD4AF37)),
-                          strokeWidth: 3,
-                        ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'TydChronos Wallet',
-                    style: TextStyle(
-                      color: Color(0xFFD4AF37),
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Advanced Banking & Cryptocurrency Platform',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 14,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _initialized ? 'Ready! Launching app...' : 'Loading TydChronos Ecosystem...',
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 12,
-                    ),
-                  ),
-                  if (!_initialized) ...[
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Please wait while we secure your wallet...',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ],
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const TydChronosLogo(size: 150, withBackground: true, isAppBarIcon: false),
+            const SizedBox(height: 30),
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD4AF37)),
+              strokeWidth: 3,
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'TydChronos Wallet',
+              style: TextStyle(
+                color: Color(0xFFD4AF37),
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          ),
+            const SizedBox(height: 8),
+            const Text(
+              'Advanced Banking & Cryptocurrency Platform',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Loading TydChronos Ecosystem...',
+              style: TextStyle(
+                color: Colors.grey,
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1038,22 +974,6 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
   final FiatWallet _fiatWallet = FiatWallet();
   final TradingBot _tradingBot = TradingBot();
   final BalanceVisibilityManager _balanceManager = BalanceVisibilityManager();
-
-  @override
-  void initState() {
-    super.initState();
-    print('🏠 TydChronosHomePage initialized successfully!');
-    
-    // Hide the web loading screen
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        js.context.callMethod('hideLoadingScreen', []);
-        print('✅ Web loading screen hidden');
-      } catch (e) {
-        print('⚠️ Could not hide web loading screen: $e');
-      }
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1874,7 +1794,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Quick Actions
+              // Quick Actions - REMOVED "Send ETH to Crypto" from here
               GridView.count(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
@@ -2540,7 +2460,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
           ),
           const SizedBox(height: 20),
 
-          // AI Trading Stats with Send ETH to Crypto Wallet button
+          // UPDATED: AI Trading Stats with Send ETH to Crypto Wallet button
           Container(
             decoration: BoxDecoration(
               color: Colors.grey[900],
@@ -2633,7 +2553,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Individual Bot Performance Cards
+          // UPDATED: Individual Bot Performance Cards
           _buildBotPerformanceCard(
             'Arbitrage Bot / Bot 1',
             'Automated cross-exchange arbitrage opportunities',
@@ -2719,7 +2639,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  // Send ETH from Trading Balance to Crypto Wallet Dialog
+  // NEW: Send ETH from Trading Balance to Crypto Wallet Dialog
   void _showSendToCryptoWalletDialog(BuildContext context, TydChronosEcosystemService ecosystem) {
     double amount = 0.0;
     final totalTradingBalance = ecosystem.totalTradingBalance;
@@ -2795,7 +2715,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  // Bot Performance Card with detailed stats
+  // UPDATED: Bot Performance Card with detailed stats
   Widget _buildBotPerformanceCard(
     String title,
     String description,

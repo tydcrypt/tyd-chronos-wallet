@@ -2,24 +2,8 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <!-- Fixed: Replace deprecated apple-mobile-web-app-capable with mobile-web-app-capable -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  
-  <!-- CSP Policy that allows Flutter to work -->
-  <meta http-equiv="Content-Security-Policy" 
-        content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob: gap:;
-                 script-src * 'unsafe-inline' 'unsafe-eval' blob: data:;
-                 style-src * 'unsafe-inline';
-                 img-src * data: blob:;
-                 font-src * data:;
-                 connect-src * ws: wss: blob: data:;
-                 media-src * data: blob:;">
-
-  <title>Chronos Wallet</title>
-  <link rel="manifest" href="manifest.json">
+  <title>TydChronos Wallet</title>
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
   
   <style>
     .loading-container {
@@ -28,203 +12,62 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: #121212;
+      background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
       z-index: 9999;
-      color: white;
+      color: gold;
       font-family: Arial, sans-serif;
     }
-    
-    .loading-spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid rgba(255,255,255,0.3);
-      border-top: 4px solid #ffffff;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 20px;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    .loading-message {
-      font-size: 16px;
-      margin-top: 10px;
-      text-align: center;
-    }
-    
-    .error-message {
-      color: #ff6b6b;
-      display: none;
-      text-align: center;
-      margin-top: 10px;
-    }
-    
-    .progress-message {
-      color: #4fc3f7;
-      display: none;
-      text-align: center;
-      margin-top: 5px;
-      font-size: 14px;
+
+    #flutter-view {
+      width: 100%;
+      height: 100vh;
     }
   </style>
 </head>
 <body>
-  <div id="loading" class="loading-container">
-    <div class="loading-spinner"></div>
-    <div class="loading-message">Loading Chronos Wallet...</div>
-    <div id="progress" class="progress-message"></div>
-    <div id="error" class="error-message"></div>
-    <button id="retry-btn" style="display: none; margin-top: 20px; padding: 10px 20px; background: #4fc3f7; border: none; border-radius: 5px; color: white; cursor: pointer;">
-      Retry Loading
-    </button>
+  <div id="flutter-view"></div>
+
+  <div class="loading-container" id="loadingContainer">
+    <h1>⚡ TydChronos Dual-Wallet</h1>
+    <p>Loading secure wallet interface...</p>
   </div>
 
   <script>
-    console.log('🚀 Starting Flutter 3.35.7 initialization...');
-    
-    const loadingEl = document.getElementById('loading');
-    const progressEl = document.getElementById('progress');
-    const errorEl = document.getElementById('error');
-    const retryBtn = document.getElementById('retry-btn');
-    let loadingStartTime = Date.now();
-    
-    function updateProgress(message) {
-      console.log('📢 ' + message);
-      if (progressEl) {
-        progressEl.textContent = message;
-        progressEl.style.display = 'block';
-      }
-    }
-    
-    function showError(message) {
-      const timeElapsed = ((Date.now() - loadingStartTime) / 1000).toFixed(1);
-      if (errorEl) {
-        errorEl.textContent = message + ' (' + timeElapsed + 's)';
-        errorEl.style.display = 'block';
-      }
-      if (retryBtn) {
-        retryBtn.style.display = 'block';
-      }
-      console.error('🔴 FLUTTER ERROR:', message);
-    }
-    
-    function hideLoading() {
-      if (loadingEl) {
-        loadingEl.style.display = 'none';
-      }
-      console.log('�� Flutter app fully loaded!');
-    }
+    console.log('🎯 Starting TydChronos Wallet...');
 
-    // Flutter 3.35.7 uses _flutter.loader - let's check what's actually available
-    async function initializeFlutter() {
-      try {
-        updateProgress('Step 1: Loading Flutter engine...');
-        
-        // First, let's check what Flutter objects are available
-        console.log('🔍 Checking Flutter environment...');
-        console.log('window._flutter:', window._flutter);
-        console.log('window.flutter:', window.flutter);
-        console.log('window.flutter_bootstrap:', window.flutter_bootstrap);
-        
-        // Method 1: Try _flutter.loader which is standard in Flutter 3.35.7
-        if (window._flutter && window._flutter.loader) {
-          console.log('✅ Using _flutter.loader');
-          updateProgress('Step 2: Initializing with _flutter.loader...');
-          
-          await window._flutter.loader.loadEntrypoint({
-            onEntrypointLoaded: async (engineInitializer) => {
-              updateProgress('Step 3: Entrypoint loaded, initializing engine...');
-              const appRunner = await engineInitializer.initializeEngine();
-              updateProgress('Step 4: Engine initialized, running app...');
-              await appRunner.runApp();
-              updateProgress('Step 5: App running successfully!');
-              setTimeout(hideLoading, 500);
-            }
-          });
-        }
-        // Method 2: Try direct main.dart.js loading (fallback)
-        else {
-          console.log('🔄 Using direct main.dart.js loading');
-          updateProgress('Step 2: Loading main application...');
-          
-          await new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'main.dart.js';
-            script.type = 'application/javascript';
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-          });
-          
-          updateProgress('Step 3: Main script loaded, waiting for Flutter...');
-          
-          // Wait for Flutter to auto-initialize
-          let attempts = 0;
-          while (attempts < 50) {
-            // Check if Flutter initialized by looking for any Flutter-related objects
-            if (window._flutter || window.flutter || document.querySelector('flt-glass-pane')) {
-              console.log('✅ Flutter auto-initialized successfully');
-              updateProgress('Step 4: Flutter initialized!');
-              setTimeout(hideLoading, 500);
-              return;
-            }
-            await new Promise(r => setTimeout(r, 100));
-            attempts++;
-          }
-          
-          // If we get here, Flutter might have initialized but we missed it
-          // Check if the app is actually running by looking for Flutter elements
-          if (document.querySelector('flt-glass-pane') || document.querySelector('flt-scene')) {
-            console.log('✅ Flutter app detected as running');
-            updateProgress('Step 5: App running successfully!');
-            setTimeout(hideLoading, 500);
-          } else {
-            throw new Error('Flutter did not auto-initialize');
-          }
-        }
-        
-      } catch (error) {
-        console.error('❌ Flutter initialization failed:', error);
-        showError('Initialization failed: ' + error.message);
+    // Function to hide loading screen (called from Flutter)
+    window.hideLoadingScreen = function() {
+      console.log('🚀 Hiding loading screen from Flutter');
+      var loading = document.getElementById('loadingContainer');
+      if (loading) {
+        loading.style.display = 'none';
       }
-    }
+    };
 
-    // Service worker registration
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/flutter_service_worker.js')
-        .then(reg => console.log('✅ Service Worker registered'))
-        .catch(err => console.warn('⚠️ Service Worker failed:', err));
-    }
-
-    // Start initialization
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initializeFlutter);
-    } else {
-      initializeFlutter();
-    }
-
-    // Retry button
-    retryBtn.addEventListener('click', () => {
-      errorEl.style.display = 'none';
-      retryBtn.style.display = 'none';
-      progressEl.style.display = 'none';
-      loadingStartTime = Date.now();
-      initializeFlutter();
-    });
-
-    // Timeout
-    setTimeout(() => {
-      if (loadingEl.style.display !== 'none') {
-        showError('Application is taking longer than expected to load');
+    // Fallback: hide after 5 seconds
+    setTimeout(function() {
+      var loading = document.getElementById('loadingContainer');
+      if (loading && loading.style.display !== 'none') {
+        console.log('⏰ Fallback: Auto-hiding loading screen');
+        loading.style.display = 'none';
       }
-    }, 45000);
+    }, 5000);
+
+    // Load Flutter app
+    var script = document.createElement('script');
+    script.src = 'main.dart.js';
+    script.type = 'application/javascript';
+    script.onload = function() {
+      console.log('✅ Flutter script loaded');
+    };
+    script.onerror = function() {
+      console.error('❌ Failed to load Flutter script');
+    };
+    document.body.appendChild(script);
   </script>
 </body>
 </html>

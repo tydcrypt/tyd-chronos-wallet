@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <!-- Fixed: Replace deprecated apple-mobile-web-app-capable with mobile-web-app-capable -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+  <!-- PROPER CSP FOR FLUTTER WEB -->
+  <meta http-equiv="Content-Security-Policy" 
+        content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob: gap:;
+                 script-src * 'unsafe-inline' 'unsafe-eval' blob: data:;
+                 style-src * 'unsafe-inline';
+                 img-src * data: blob:;
+                 font-src * data:;
+                 connect-src * ws: wss: blob: data:;
+                 media-src * data: blob:;
+                 worker-src * blob: data:;
+                 frame-src * data: blob:;">
+
+  <title>Chronos Wallet</title>
+  <link rel="manifest" href="manifest.json">
+
+  <style>
+    .loading-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #000000 0%, #1a1a1a 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      color: gold;
+      font-family: Arial, sans-serif;
+    }
+
+    .dapp-connection-dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(26, 26, 26, 0.95);
+      border: 2px solid gold;
+      border-radius: 15px;
+      padding: 30px;
+      z-index: 10000;
+      text-align: center;
+      min-width: 350px;
+      display: none;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .dapp-connection-dialog h3 {
+      color: gold;
+      margin-bottom: 15px;
+    }
+
+    .dapp-connection-dialog button {
+      margin: 5px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .confirm-btn {
+      background: gold;
+      color: black;
+    }
+
+    .reject-btn {
+      background: transparent;
+      color: gold;
+      border: 1px solid gold !important;
+    }
+
+    /* Flutter container styling */
+    #flutter-view {
+      width: 100%;
+      height: 100vh;
+      position: relative;
+    }
+  </style>
+</head>
+<body>
+  <!-- Flutter app container -->
+  <div id="flutter-view"></div>
+
+  <div class="loading-container" id="loadingContainer">
+    <h1>⚡ Tydchronos Dual-Wallet</h1>
+    <p>Loading secure wallet interface...</p>
+  </div>
+
+  <!-- DApp Connection Dialog -->
+  <div id="dappConnectionDialog" class="dapp-connection-dialog">
+    <h3>🔗 DApp Connection Request</h3>
+    <p id="dappInfo">A DApp wants to connect to your wallet</p>
+    <div style="margin: 20px 0; text-align: left;">
+      <p style="color: gold; font-weight: bold;">Permissions:</p>
+      <ul style="font-size: 14px;">
+        <li>View your wallet address</li>
+        <li>Request transaction signatures</li>
+        <li>Suggest transactions for approval</li>
+      </ul>
+    </div>
+    <div>
+      <button id="confirmDAppConnection" class="confirm-btn">✅ Connect</button>
+      <button id="rejectDAppConnection" class="reject-btn">❌ Cancel</button>
+    </div>
+  </div>
+
+  <script>
+    // Load Flutter app
+    window.addEventListener('load', function(ev) {
+      console.log('🎯 Loading Flutter Tydchronos Wallet...');
+      
+      // Load Flutter script
+      var script = document.createElement('script');
+      script.src = 'main.dart.js';
+      script.type = 'application/javascript';
+      script.onload = function() {
+        console.log('✅ Flutter script loaded successfully');
+        // Flutter will handle hiding the loading container
+      };
+      script.onerror = function() {
+        console.error('❌ Failed to load Flutter script');
+        document.getElementById('loadingContainer').innerHTML = 
+          '<h1 style="color: red;">⚠️ Failed to load wallet</h1>' +
+          '<p>Please refresh the page or check console for errors</p>';
+      };
+      document.body.appendChild(script);
+    });
+
+    // DApp Connectivity Handler
+    window.addEventListener('message', function(event) {
+      // Security: Only accept messages from trusted origins
+      const trustedOrigins = [
+        'https://tydchronos-dapp.netlify.app',
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:3002'
+      ];
+
+      if (!trustedOrigins.includes(event.origin)) {
+        console.warn('⚠️ Untrusted message origin:', event.origin);
+        return;
+      }
+
+      console.log('📨 DApp message received:', event.data);
+
+      if (event.data.type === 'CONNECTION_REQUEST') {
+        showDAppConnectionDialog(event);
+      }
+    });
+
+    function showDAppConnectionDialog(event) {
+      const dialog = document.getElementById('dappConnectionDialog');
+      const dappInfo = document.getElementById('dappInfo');
+      
+      const dappName = event.data.dapp || 'Unknown DApp';
+      const network = event.data.network || 'Unknown Network';
+      
+      dappInfo.textContent = `${dappName} wants to connect on ${network}`;
+      dialog.style.display = 'block';
+
+      // Store the event for later use
+      window.pendingDAppConnection = event;
+
+      // Setup button handlers
+      document.getElementById('confirmDAppConnection').onclick = function() {
+        confirmDAppConnection(event);
+      };
+      document.getElementById('rejectDAppConnection').onclick = function() {
+        rejectDAppConnection(event);
+      };
+    }
+
+    function confirmDAppConnection(event) {
+      // Generate a demo address (in real app, use the actual wallet address)
+      const demoAddress = generateDemoAddress();
+      
+      event.source.postMessage({
+        type: 'WALLET_CONNECTED',
+        address: demoAddress,
+        walletType: 'tydchronos'
+      }, event.origin);
+
+      hideDAppConnectionDialog();
+      console.log('✅ DApp connection confirmed with address:', demoAddress);
+    }
+
+    function rejectDAppConnection(event) {
+      event.source.postMessage({
+        type: 'WALLET_REJECTED',
+        reason: 'User rejected connection'
+      }, event.origin);
+
+      hideDAppConnectionDialog();
+      console.log('❌ DApp connection rejected');
+    }
+
+    function hideDAppConnectionDialog() {
+      const dialog = document.getElementById('dappConnectionDialog');
+      dialog.style.display = 'none';
+      window.pendingDAppConnection = null;
+    }
+
+    function generateDemoAddress() {
+      const chars = '0123456789abcdef';
+      let address = '0x';
+      for (let i = 0; i < 40; i++) {
+        address += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return address;
+    }
+
+    // Expose wallet interface for DApp connectivity
+    window.tydchronosWallet = {
+      isTydchronos: true,
+      request: async (args) => {
+        console.log('Wallet request:', args);
+        if (args.method === 'eth_requestAccounts') {
+          // Return demo address for now
+          return [generateDemoAddress()];
+        }
+        return null;
+      }
+    };
+
+    // Notify that wallet is ready when Flutter loads
+    window.flutterWebReady = function() {
+      console.log('🎯 Tydchronos Wallet loaded and ready for DApp connections');
+      document.getElementById('loadingContainer').style.display = 'none';
+      
+      // Notify opener that wallet is ready
+      if (window.opener) {
+        window.opener.postMessage({
+          type: 'WALLET_READY'
+        }, '*');
+      }
+    };
+  </script>
+</body>
+</html>
