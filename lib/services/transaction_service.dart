@@ -14,7 +14,7 @@ class TransactionService {
     required String symbol,
     bool enableVolatilityProtection = true,
   }) async {
-    await Future.delayed(Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 3));
     
     final txHash = '0x${DateTime.now().millisecondsSinceEpoch.toRadixString(16)}${toAddress.substring(2, 10)}';
     
@@ -39,14 +39,14 @@ class TransactionService {
   
   // Additional utility methods
   Future<List<Map<String, dynamic>>> getTransactionHistory(String address) async {
-    await Future.delayed(Duration(milliseconds: 300));
+    await Future.delayed(const Duration(milliseconds: 300));
     return [
       {
         'hash': '0x1234567890abcdef',
         'type': 'send',
         'amount': -0.1,
         'symbol': 'ETH',
-        'timestamp': DateTime.now().subtract(Duration(hours: 1)).toString(),
+        'timestamp': DateTime.now().subtract(const Duration(hours: 1)).toString(),
         'status': 'confirmed'
       },
       {
@@ -54,7 +54,7 @@ class TransactionService {
         'type': 'receive',
         'amount': 0.5,
         'symbol': 'ETH',
-        'timestamp': DateTime.now().subtract(Duration(days: 1)).toString(),
+        'timestamp': DateTime.now().subtract(const Duration(days: 1)).toString(),
         'status': 'confirmed'
       }
     ];

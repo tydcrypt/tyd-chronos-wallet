@@ -27,20 +27,20 @@ class DAppIntegrationWrapper {
           ? ValueNotifier<bool>(true)
           : ValueNotifier<bool>(false),
       builder: (context, hasPendingConnection, child) {
-        if (!hasPendingConnection) return SizedBox.shrink();
+        if (!hasPendingConnection) return const SizedBox.shrink();
         
         return DAppConnectionDialog(
-          dappName: _dappBridge.pendingDAppName ?? 'Unknown DApp',
-          network: _dappBridge.pendingNetwork ?? 'Unknown Network',
+          dappName: _dappBridge.connectedDApp ?? 'Unknown DApp',
+          network: _dappBridge.currentNetwork ?? 'Unknown Network',
           onConfirm: () {
             // Use a demo address for now - replace with actual wallet address
             final demoAddress = _generateDemoAddress();
-            _dappBridge.acceptConnection(demoAddress);
+            _dappBridge.acceptConnection();
             
             // Show success message
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('✅ Connected to ${_dappBridge.pendingDAppName}'),
+                content: Text('✅ Connected to ${_dappBridge.connectedDApp}'),
                 backgroundColor: Colors.green,
               )
             );
@@ -50,7 +50,7 @@ class DAppIntegrationWrapper {
             
             // Show rejection message
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
+              const SnackBar(
                 content: Text('❌ Connection rejected'),
                 backgroundColor: Colors.red,
               )

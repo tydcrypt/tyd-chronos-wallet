@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/ethereum_service.dart';
-import '../services/currency_service.dart';
 import '../services/price_feed_service.dart';
 
 class WalletDashboard extends StatefulWidget {
@@ -13,18 +12,21 @@ class _WalletDashboardState extends State<WalletDashboard> {
   @override
   void initState() {
     super.initState();
-    _initializeWallet();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeWallet();
+    });
   }
 
   void _initializeWallet() async {
-    // Initialize wallet data
+    // Initialize wallet data - this runs after the widget is built
     final ethService = Provider.of<EthereumService>(context, listen: false);
     final priceService = Provider.of<PriceFeedService>(context, listen: false);
-    
+
     try {
       // Load initial data
       await priceService.getCryptoPrices(['ethereum', 'bitcoin']);
       // Additional initialization here
+      print('Wallet dashboard initialized successfully');
     } catch (e) {
       print('Initialization error: $e');
     }
@@ -33,133 +35,110 @@ class _WalletDashboardState extends State<WalletDashboard> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: Text('TydChronos Wallet', style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.blue[700],
+        backgroundColor: Colors.black,
         elevation: 0,
+        title: Text(
+          'Tydchronos Wallet',
+          style: TextStyle(
+            color: Color(0xFFFFD700),
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         actions: [
-          IconButton(icon: Icon(Icons.account_balance_wallet), onPressed: () {}),
-          IconButton(icon: Icon(Icons.settings), onPressed: () {}),
+          IconButton(
+            icon: Icon(Icons.account_circle, color: Color(0xFFFFD700)),
+            onPressed: () {
+              // Profile action
+            },
+          ),
         ],
       ),
       body: Container(
-        color: Colors.grey[100],
-        child: Column(
-          children: [
-            // Balance Card
-            _buildBalanceCard(),
-            SizedBox(height: 16),
-            // Quick Actions
-            _buildQuickActions(),
-            SizedBox(height: 16),
-            // Recent Transactions
-            _buildRecentTransactions(),
-          ],
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black,
+              Color(0xFF1a1a1a),
+              Color(0xFF2d1f00),
+            ],
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // Send transaction
-          _showSendDialog();
-        },
-        child: Icon(Icons.send),
-        backgroundColor: Colors.green,
-      ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
-    );
-  }
-
-  Widget _buildBalanceCard() {
-    return Card(
-      margin: EdgeInsets.all(16),
-      elevation: 4,
-      child: Container(
-        padding: EdgeInsets.all(20),
-        width: double.infinity,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Total Balance', style: TextStyle(color: Colors.grey[600])),
-            SizedBox(height: 8),
-            Text('\$0.00', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold)),
-            SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    children: [
-                      Text('ETH', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text('0.0', style: TextStyle(fontSize: 18)),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    children: [
-                      Text('BTC', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text('0.0', style: TextStyle(fontSize: 18)),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Column(
-                    children: [
-                      Text('USD', style: TextStyle(fontWeight: FontWeight.bold)),
-                      Text('0.0', style: TextStyle(fontSize: 18)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickActions() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        _buildActionButton(Icons.download, 'Receive', Colors.blue),
-        _buildActionButton(Icons.upload, 'Send', Colors.green),
-        _buildActionButton(Icons.swap_horiz, 'Swap', Colors.orange),
-        _buildActionButton(Icons.account_balance, 'Buy', Colors.purple),
-      ],
-    );
-  }
-
-  Widget _buildActionButton(IconData icon, String label, Color color) {
-    return Column(
-      children: [
-        CircleAvatar(
-          backgroundColor: color,
-          child: Icon(icon, color: Colors.white),
-        ),
-        SizedBox(height: 4),
-        Text(label, style: TextStyle(fontSize: 12)),
-      ],
-    );
-  }
-
-  Widget _buildRecentTransactions() {
-    return Expanded(
-      child: Card(
-        margin: EdgeInsets.symmetric(horizontal: 16),
-        elevation: 2,
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Recent Transactions', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              SizedBox(height: 16),
-              Expanded(
-                child: ListView(
+              // Welcome section
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      Color(0xFF2d1f00),
+                      Color(0xFF4a3c00),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Color(0xFFFFD700).withOpacity(0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildTransactionItem('Received ETH', '+0.1 ETH', Colors.green),
-                    _buildTransactionItem('Sent BTC', '-0.05 BTC', Colors.red),
-                    _buildTransactionItem('Swapped', 'ETH to USDC', Colors.blue),
+                    Text(
+                      'Welcome to Tydchronos!',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFFFFD700),
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Your decentralized finance companion',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              SizedBox(height: 32),
+              
+              // Features grid
+              Expanded(
+                child: GridView.count(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 16,
+                  mainAxisSpacing: 16,
+                  children: [
+                    _buildFeatureCard(
+                      icon: Icons.account_balance_wallet,
+                      title: 'Wallet',
+                      color: Color(0xFFFFD700),
+                    ),
+                    _buildFeatureCard(
+                      icon: Icons.swap_horiz,
+                      title: 'Swap',
+                      color: Color(0xFF00FF00),
+                    ),
+                    _buildFeatureCard(
+                      icon: Icons.trending_up,
+                      title: 'Portfolio',
+                      color: Color(0xFF00BFFF),
+                    ),
+                    _buildFeatureCard(
+                      icon: Icons.settings,
+                      title: 'Settings',
+                      color: Color(0xFFFF6B6B),
+                    ),
                   ],
                 ),
               ),
@@ -170,46 +149,37 @@ class _WalletDashboardState extends State<WalletDashboard> {
     );
   }
 
-  Widget _buildTransactionItem(String title, String amount, Color color) {
-    return ListTile(
-      leading: CircleAvatar(backgroundColor: color, child: Icon(Icons.account_balance_wallet, color: Colors.white)),
-      title: Text(title),
-      subtitle: Text('2 hours ago'),
-      trailing: Text(amount, style: TextStyle(color: color, fontWeight: FontWeight.bold)),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      items: [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Wallet'),
-        BottomNavigationBarItem(icon: Icon(Icons.bar_chart), label: 'Markets'),
-        BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
-      ],
-      currentIndex: 0,
-      onTap: (index) {
-        // Handle navigation
-      },
-    );
-  }
-
-  void _showSendDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Send Crypto'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+  Widget _buildFeatureCard({
+    required IconData icon,
+    required String title,
+    required Color color,
+  }) {
+    return Card(
+      color: Colors.grey.shade900,
+      elevation: 4,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: color.withOpacity(0.3)),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          // Handle feature tap
+        },
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            TextField(decoration: InputDecoration(labelText: 'Recipient Address')),
-            TextField(decoration: InputDecoration(labelText: 'Amount')),
-            TextField(decoration: InputDecoration(labelText: 'Memo (optional)')),
+            Icon(icon, size: 40, color: color),
+            SizedBox(height: 12),
+            Text(
+              title,
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
-          ElevatedButton(onPressed: () {}, child: Text('Send')),
-        ],
       ),
     );
   }

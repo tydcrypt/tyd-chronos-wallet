@@ -50,19 +50,19 @@ class OptimizedWalletConnectService {
   
   Future<void> _initializeCoreConnection() async {
     print('[INFO] Establishing core WalletConnect connection...');
-    await Future.delayed(Duration(seconds: 1)); // Simulated
+    await Future.delayed(const Duration(seconds: 1)); // Simulated
     print('[INFO] Core connection established');
   }
   
   Future<void> _preloadCommonNetworks() async {
     print('[INFO] Preloading common blockchain networks...');
-    await Future.delayed(Duration(milliseconds: 800)); // Simulated
+    await Future.delayed(const Duration(milliseconds: 800)); // Simulated
     print('[INFO] Networks preloaded');
   }
   
   Future<void> _setupEventListeners() async {
     print('[INFO] Setting up event listeners...');
-    await Future.delayed(Duration(milliseconds: 500)); // Simulated
+    await Future.delayed(const Duration(milliseconds: 500)); // Simulated
     print('[INFO] Event listeners ready');
   }
   

@@ -1,7 +1,6 @@
 // Transaction Service
 // Manages transaction history and operations
 
-import 'dart:convert';
 
 class Transaction {
   final String hash;

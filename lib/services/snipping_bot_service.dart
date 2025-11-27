@@ -8,13 +8,13 @@ class SnippingBotService {
   
   // Method called by TydChronosEcosystemService
   Future<void> initialize(String address) async {
-    await Future.delayed(Duration(milliseconds: 200));
+    await Future.delayed(const Duration(milliseconds: 200));
     print("Snipping bots initialized for: $address");
   }
   
   // Method called by TydChronosEcosystemService
   Future<Map<String, dynamic>> activateArbitrageBot() async {
-    await Future.delayed(Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 2));
     print("Arbitrage bot activated");
     return {
       'contractAddress': '0xArbitrageContract123',
@@ -25,7 +25,7 @@ class SnippingBotService {
   
   // Method called by TydChronosEcosystemService
   Future<Map<String, dynamic>> activateLiquidityBot() async {
-    await Future.delayed(Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 2));
     print("Liquidity bot activated");
     return {
       'contractAddress': '0xLiquidityContract456',
@@ -36,7 +36,7 @@ class SnippingBotService {
   
   // Method called by TydChronosEcosystemService
   Future<Map<String, dynamic>> activateMarketMakingBot() async {
-    await Future.delayed(Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 2));
     print("Market making bot activated");
     return {
       'contractAddress': '0xMarketMakingContract789',
@@ -47,13 +47,13 @@ class SnippingBotService {
   
   // Method called by TydChronosEcosystemService
   Future<void> deactivateAllBots() async {
-    await Future.delayed(Duration(seconds: 1));
+    await Future.delayed(const Duration(seconds: 1));
     print("All snipping bots deactivated");
   }
   
   // Method called by TydChronosEcosystemService
   Future<Map<String, dynamic>> getBotPerformance() async {
-    await Future.delayed(Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 500));
     return {
       'totalTrades': 156,
       'successRate': 78.5,

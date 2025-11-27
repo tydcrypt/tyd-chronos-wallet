@@ -1,7 +1,6 @@
 // Security Service
 // Handles encryption, authentication, and security features
 
-import 'dart:convert';
 import 'package:encrypt/encrypt.dart';
 
 class SecurityService {

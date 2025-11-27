@@ -1,0 +1,124 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../services/authentication_service.dart';
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  bool _initialized = false;
+  bool _navigationCompleted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      setState(() {
+        _initialized = true;
+      });
+
+      await Future.delayed(const Duration(seconds: 3));
+
+      if (mounted && !_navigationCompleted) {
+        _navigationCompleted = true;
+        final authService = Provider.of<AuthenticationService>(context, listen: false);
+        
+        // Use named routes to avoid direct class references
+        if (authService.isAuthenticated) {
+          Navigator.pushReplacementNamed(context, '/home');
+        } else {
+          Navigator.pushReplacementNamed(context, '/auth');
+        }
+      }
+    } catch (e) {
+      if (mounted && !_navigationCompleted) {
+        _navigationCompleted = true;
+        await Future.delayed(const Duration(seconds: 3));
+        final authService = Provider.of<AuthenticationService>(context, listen: false);
+        
+        if (authService.isAuthenticated) {
+          Navigator.pushReplacementNamed(context, '/home');
+        } else {
+          Navigator.pushReplacementNamed(context, '/auth');
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black,
+              Color(0xFF1a1a1a),
+              Color(0xFF2d1f00),
+            ],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  image: const DecorationImage(
+                    image: AssetImage('assets/images/logo.png'),
+                    fit: BoxFit.cover,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFFD700).withOpacity(0.5),
+                      blurRadius: 15,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
+              _initialized
+                  ? const Icon(Icons.check_circle, color: Colors.green, size: 30)
+                  : const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD4AF37)),
+                      strokeWidth: 3,
+                    ),
+              const SizedBox(height: 20),
+              const Text(
+                'TydChronos Wallet',
+                style: TextStyle(
+                  color: Color(0xFFD4AF37),
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Advanced Banking & Cryptocurrency Platform',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

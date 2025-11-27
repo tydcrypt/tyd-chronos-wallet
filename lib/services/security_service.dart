@@ -15,17 +15,17 @@ class SecurityService {
   
   Future<void> initialize() async {
     // Initialize security service
-    await Future.delayed(Duration(milliseconds: 100));
+    await Future.delayed(const Duration(milliseconds: 100));
   }
   
   Future<void> requireTransactionPin() async {
     // Simulate PIN requirement
-    await Future.delayed(Duration(seconds: 1));
+    await Future.delayed(const Duration(seconds: 1));
   }
   
   Future<void> requireBiometricAuth() async {
     // Simulate biometric authentication
-    await Future.delayed(Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 2));
   }
   
   String encryptData(String data) {

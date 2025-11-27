@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../controllers/trading_controller.dart';
 
 class AutomatedTradingScreen extends StatelessWidget {
-  const AutomatedTradingScreen({Key? key}) : super(key: key);
+  const AutomatedTradingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

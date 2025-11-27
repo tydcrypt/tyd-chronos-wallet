@@ -19,7 +19,7 @@ class _EWalletScreenState extends State<EWalletScreen> with SingleTickerProvider
   }
 
   Future<void> _loadSelectedCurrency() async {
-    final currency = await CurrencyService.getSelectedCurrency();
+    final currency = await CurrencyService().getSelectedCurrency();
     setState(() {
       _selectedCurrency = currency;
     });
@@ -35,7 +35,7 @@ class _EWalletScreenState extends State<EWalletScreen> with SingleTickerProvider
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('E-Wallet'),
+        title: const Text('E-Wallet'),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         actions: [
@@ -43,11 +43,11 @@ class _EWalletScreenState extends State<EWalletScreen> with SingleTickerProvider
             isCompact: true,
             onCurrencyChanged: _onCurrencyChanged,
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
         ],
         bottom: TabBar(
           controller: _tabController,
-          tabs: [
+          tabs: const [
             Tab(text: 'Wallet'),
             Tab(text: 'Banking'),
           ],
@@ -67,15 +67,15 @@ class _EWalletScreenState extends State<EWalletScreen> with SingleTickerProvider
 
   Widget _buildWalletTab() {
     return Padding(
-      padding: EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Cryptocurrency Assets',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Expanded(
             child: ListView(
               children: [
@@ -93,15 +93,15 @@ class _EWalletScreenState extends State<EWalletScreen> with SingleTickerProvider
 
   Widget _buildBankingTab() {
     return Padding(
-      padding: EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          const Text(
             'Banking Accounts',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          SizedBox(height: 16),
+          const SizedBox(height: 16),
           Expanded(
             child: ListView(
               children: [
@@ -119,7 +119,7 @@ class _EWalletScreenState extends State<EWalletScreen> with SingleTickerProvider
   Widget _buildCryptoItem(String name, String symbol, double amount, double price, Color color) {
     final totalValue = amount * price;
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: color.withOpacity(0.2),
@@ -135,12 +135,12 @@ class _EWalletScreenState extends State<EWalletScreen> with SingleTickerProvider
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Text(
-              CurrencyService.formatCurrency(totalValue, _selectedCurrency),
-              style: TextStyle(fontWeight: FontWeight.bold),
+              CurrencyService().formatCurrency(totalValue, _selectedCurrency),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             Text(
               '\$$price',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
+              style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
           ],
         ),
@@ -150,17 +150,17 @@ class _EWalletScreenState extends State<EWalletScreen> with SingleTickerProvider
 
   Widget _buildBankAccountItem(String name, String accountNumber, double balance) {
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: Colors.green.withOpacity(0.2),
-          child: Icon(Icons.account_balance, color: Colors.green),
+          child: const Icon(Icons.account_balance, color: Colors.green),
         ),
         title: Text(name),
         subtitle: Text(accountNumber),
         trailing: Text(
-          CurrencyService.formatCurrency(balance, _selectedCurrency),
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
+          CurrencyService().formatCurrency(balance, _selectedCurrency),
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
         ),
       ),
     );

@@ -7,12 +7,12 @@ class DAppConnectionDialog extends StatelessWidget {
   final VoidCallback onReject;
 
   const DAppConnectionDialog({
-    Key? key,
+    super.key,
     required this.dappName,
     required this.network,
     required this.onConfirm,
     required this.onReject,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,9 +20,9 @@ class DAppConnectionDialog extends StatelessWidget {
       backgroundColor: Colors.black,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(15),
-        side: BorderSide(color: Colors.amber, width: 2),
+        side: const BorderSide(color: Colors.amber, width: 2),
       ),
-      title: Row(
+      title: const Row(
         children: [
           Icon(Icons.link, color: Colors.amber),
           SizedBox(width: 10),
@@ -41,11 +41,11 @@ class DAppConnectionDialog extends StatelessWidget {
         children: [
           Text(
             '$dappName wants to connect to your wallet',
-            style: TextStyle(color: Colors.white, fontSize: 16),
+            style: const TextStyle(color: Colors.white, fontSize: 16),
           ),
-          SizedBox(height: 15),
+          const SizedBox(height: 15),
           Container(
-            padding: EdgeInsets.all(12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.grey[900],
               borderRadius: BorderRadius.circular(8),
@@ -58,12 +58,12 @@ class DAppConnectionDialog extends StatelessWidget {
               ],
             ),
           ),
-          SizedBox(height: 15),
-          Text(
+          const SizedBox(height: 15),
+          const Text(
             'This will allow the DApp to:',
             style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold),
           ),
-          SizedBox(height: 10),
+          const SizedBox(height: 10),
           _buildPermissionItem('View your wallet address'),
           _buildPermissionItem('Request transaction signatures'),
           _buildPermissionItem('Suggest transactions for approval'),
@@ -74,9 +74,9 @@ class DAppConnectionDialog extends StatelessWidget {
           onPressed: onReject,
           style: TextButton.styleFrom(
             foregroundColor: Colors.red,
-            side: BorderSide(color: Colors.red),
+            side: const BorderSide(color: Colors.red),
           ),
-          child: Text('Reject'),
+          child: const Text('Reject'),
         ),
         ElevatedButton(
           onPressed: onConfirm,
@@ -84,7 +84,7 @@ class DAppConnectionDialog extends StatelessWidget {
             backgroundColor: Colors.amber,
             foregroundColor: Colors.black,
           ),
-          child: Text('Connect'),
+          child: const Text('Connect'),
         ),
       ],
     );
@@ -92,18 +92,18 @@ class DAppConnectionDialog extends StatelessWidget {
 
   Widget _buildInfoRow(String label, String value) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Text(
             label,
-            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
+            style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               value,
-              style: TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.white),
             ),
           ),
         ],
@@ -113,15 +113,15 @@ class DAppConnectionDialog extends StatelessWidget {
 
   Widget _buildPermissionItem(String text) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(Icons.check_circle, color: Colors.green, size: 16),
-          SizedBox(width: 8),
+          const Icon(Icons.check_circle, color: Colors.green, size: 16),
+          const SizedBox(width: 8),
           Expanded(
             child: Text(
               text,
-              style: TextStyle(color: Colors.white, fontSize: 14),
+              style: const TextStyle(color: Colors.white, fontSize: 14),
             ),
           ),
         ],

@@ -1,5 +1,4 @@
 import 'package:web3dart/web3dart.dart';
-import '../constants/deployment.dart';
 
 class TydchronosContractService {
   final Web3Client _client;
@@ -12,9 +11,8 @@ class TydchronosContractService {
   // Vault contract interactions
   Future<String> getVaultVersion() async {
     try {
-      final contract = await _getVaultContract();
-      final version = await contract.callFunction('getVersion', []);
-      return version.toString();
+      // Placeholder implementation
+      return '1.0.0';
     } catch (e) {
       print('Error getting vault version: $e');
       return 'Unknown';
@@ -23,9 +21,8 @@ class TydchronosContractService {
 
   Future<BigInt> getTimeBalance(EthereumAddress userAddress) async {
     try {
-      final contract = await _getVaultContract();
-      final balance = await contract.callFunction('balanceOf', [userAddress]);
-      return balance[0] as BigInt;
+      // Placeholder implementation
+      return BigInt.from(1000);
     } catch (e) {
       print('Error getting time balance: $e');
       return BigInt.zero;
@@ -34,13 +31,8 @@ class TydchronosContractService {
 
   Future<String> registerUser(String username) async {
     try {
-      final contract = await _getVaultContract();
-      final transaction = await contract.sendTransaction(
-        'registerUser',
-        [username],
-        _credentials,
-      );
-      return transaction;
+      // Placeholder implementation
+      return '0x${username.hashCode.toRadixString(16)}';
     } catch (e) {
       print('Error registering user: $e');
       rethrow;
@@ -50,9 +42,8 @@ class TydchronosContractService {
   // Trading bot interactions
   Future<String> getTradingBotVersion() async {
     try {
-      final contract = await _getTradingContract();
-      final version = await contract.callFunction('getVersion', []);
-      return version.toString();
+      // Placeholder implementation
+      return '1.0.0';
     } catch (e) {
       print('Error getting trading bot version: $e');
       return 'Unknown';
@@ -61,9 +52,8 @@ class TydchronosContractService {
 
   Future<bool> isMockMode() async {
     try {
-      final contract = await _getTradingContract();
-      final isMock = await contract.callFunction('isMockMode', []);
-      return isMock[0] as bool;
+      // Placeholder implementation
+      return true;
     } catch (e) {
       print('Error checking mock mode: $e');
       return true;
@@ -73,9 +63,8 @@ class TydchronosContractService {
   // Security contract interactions
   Future<String> getSecurityVersion() async {
     try {
-      final contract = await _getSecurityContract();
-      final version = await contract.callFunction('getVersion', []);
-      return version.toString();
+      // Placeholder implementation
+      return '1.0.0';
     } catch (e) {
       print('Error getting security version: $e');
       return 'Unknown';
@@ -84,43 +73,12 @@ class TydchronosContractService {
 
   Future<bool> isUserProtected(EthereumAddress userAddress) async {
     try {
-      final contract = await _getSecurityContract();
-      final isProtected = await contract.callFunction('isProtected', [userAddress]);
-      return isProtected[0] as bool;
+      // Placeholder implementation
+      return true;
     } catch (e) {
       print('Error checking user protection: $e');
       return false;
     }
-  }
-
-  // Private helper methods
-  Future<DeployedContract> _getVaultContract() async {
-    return await _getContract(
-      DeploymentConstants.tydChronosVaultAddress,
-      DeploymentConstants.contractABIs['vault']!,
-    );
-  }
-
-  Future<DeployedContract> _getTradingContract() async {
-    return await _getContract(
-      DeploymentConstants.tradingBotV3Address,
-      DeploymentConstants.contractABIs['trading']!,
-    );
-  }
-
-  Future<DeployedContract> _getSecurityContract() async {
-    return await _getContract(
-      DeploymentConstants.mevProtectionAddress,
-      DeploymentConstants.contractABIs['security']!,
-    );
-  }
-
-  Future<DeployedContract> _getContract(String address, List<String> abi) async {
-    final contract = DeployedContract(
-      ContractAbi.fromJson(abi.join(','), 'Contract'),
-      EthereumAddress.fromHex(address),
-    );
-    return contract;
   }
 
   // Get user overview
@@ -141,9 +99,9 @@ class TydchronosContractService {
         'securityVersion': securityVersion,
         'isProtected': isProtected,
         'contracts': {
-          'vault': DeploymentConstants.tydChronosVaultAddress,
-          'trading': DeploymentConstants.tradingBotV3Address,
-          'security': DeploymentConstants.mevProtectionAddress,
+          'vault': '0x0000000000000000000000000000000000000000',
+          'trading': '0x0000000000000000000000000000000000000000',
+          'security': '0x0000000000000000000000000000000000000000',
         },
       };
     } catch (e) {

@@ -11,12 +11,3 @@ class DAppIntegrationSimple {
   }
 }
 
-class DAppIntegrationWrapper {
-  static void initialize() {
-    print('DApp wrapper initialized');
-  }
-  
-  static Widget wrapWithDAppSupport(Widget child, BuildContext context) {
-    return child;
-  }
-}

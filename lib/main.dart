@@ -1,29 +1,951 @@
-import 'dart:developer';
-import 'dart:js' as js;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:async';
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
+import 'package:bip39/bip39.dart';
+import 'package:flutter/material.dart';
+import 'dart:developer' as developer;
+import 'package:provider/provider.dart';
 import 'package:bip39/bip39.dart' as bip39;
+import 'services/authentication_service.dart';
+import 'services/wallet_manager_service.dart';
+// Add other existing imports here...
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'services/ethereum_service.dart';
-import 'package:web3dart/web3dart.dart';
-import 'services/currency_service.dart';
 import 'services/price_feed_service.dart';
 import 'services/transaction_service.dart';
 import 'services/backend_api_service.dart';
 import 'services/security_service.dart';
 import 'services/dapp_integration_simple.dart';
 import 'services/snipping_bot_service.dart';
-import 'features/automated_trading/automated_trading.dart';
 import 'services/dapp_bridge_service.dart';
+import 'services/dapp_integration_wrapper.dart';
+import 'services/dapp_integration.dart';
+import 'services/walletconnect_service.dart';
+import 'components/dapp_connection_dialog.dart';
+import 'components/dapp_connections_panel.dart';
+
+// ==================== DAPP INTEGRATION MANAGER ====================
+class DAppIntegrationManager extends ChangeNotifier {
+  final DAppBridgeService _dappBridge = DAppBridgeService();
+  final DAppIntegration _dappIntegration = DAppIntegration();
+  final WalletConnectService _walletConnect = WalletConnectService();
+  
+  bool get hasPendingConnection => _dappIntegration.hasPendingConnection;
+  String? get connectedDApp => _dappIntegration.connectedDApp;
+  DAppBridgeService get dappBridge => _dappBridge;
+  WalletConnectService get walletConnect => _walletConnect;
+  
+  Future<void> initialize() async {
+    try {
+      print('[DApp] Initializing DApp integration services...');
+      await _dappBridge.initialize(initialNetwork: 'ethereum');
+      await _walletConnect.initialize();
+      print('[DApp] DApp integration services initialized');
+    } catch (e) {
+      print('[DApp] DApp initialization error: $e');
+    }
+  }
+  
+  void setPendingConnection(String dappName) {
+    _dappIntegration.setPendingConnection(dappName);
+    notifyListeners();
+  }
+  
+  void clearPendingConnection() {
+    _dappIntegration.clearPendingConnection();
+    notifyListeners();
+  }
+  
+  void completeConnection() {
+    _dappIntegration.completeConnection();
+    notifyListeners();
+  }
+}
+
+// ==================== SPLASH SCREEN ====================
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  bool _initialized = false;
+  bool _navigationCompleted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      setState(() {
+        _initialized = true;
+      });
+
+      // Wait for 3 seconds and then navigate
+      await Future.delayed(const Duration(seconds: 3));
+
+      if (mounted && !_navigationCompleted) {
+        _navigationCompleted = true;
+        final authService = Provider.of<AuthenticationService>(context, listen: false);
+        if (authService.isAuthenticated) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const TydChronosHomePage()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AuthScreen()),
+          );
+        }
+      }
+    } catch (e) {
+      // Even if there's an error, navigate to appropriate page after delay
+      if (mounted && !_navigationCompleted) {
+        _navigationCompleted = true;
+        await Future.delayed(const Duration(seconds: 3));
+        final authService = Provider.of<AuthenticationService>(context, listen: false);
+        if (authService.isAuthenticated) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const TydChronosHomePage()),
+          );
+        } else {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const AuthScreen()),
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black,
+              Color(0xFF1a1a1a),
+              Color(0xFF2d1f00),
+            ],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Custom Tydchronos Logo
+              Container(
+                width: 150,
+                height: 150,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  image: const DecorationImage(
+                    image: AssetImage('assets/images/logo.png'),
+                    fit: BoxFit.cover,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFFFD700).withOpacity(0.5),
+                      blurRadius: 15,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
+              _initialized
+                  ? const Icon(Icons.check_circle, color: Colors.green, size: 30)
+                  : const CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD4AF37)),
+                      strokeWidth: 3,
+                    ),
+              const SizedBox(height: 20),
+              Text(
+                'TydChronos Wallet',
+                style: TextStyle(
+                  color: Color(0xFFD4AF37),
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Advanced Banking & Cryptocurrency Platform',
+                style: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _initialized ? 'Ready! Launching app...' : 'Loading TydChronos Ecosystem...',
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== AUTH SCREEN ====================
+class AuthScreen extends StatefulWidget {
+  const AuthScreen({super.key});
+
+  @override
+  State<AuthScreen> createState() => _AuthScreenState();
+}
+
+class _AuthScreenState extends State<AuthScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  
+  bool _isLoading = false;
+  bool _isSignUp = false;
+  String _selectedAuthMethod = 'email'; // 'email', 'phone', 'username'
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.black,
+              Color(0xFF1a1a1a),
+              Color(0xFF2d1f00),
+            ],
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Container(
+              width: 400,
+              padding: const EdgeInsets.all(30),
+              margin: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.grey[900]!.withOpacity(0.8),
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFFD700).withOpacity(0.3),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // TydChronos Logo
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(15),
+                      image: const DecorationImage(
+                        image: AssetImage('assets/images/logo.png'),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  // Title
+                  Text(
+                    'TydChronos Wallet',
+                    style: TextStyle(
+                      color: Color(0xFFD4AF37),
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Advanced Banking & Cryptocurrency Platform',
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 30),
+                  
+                  // Toggle between Sign In and Sign Up
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[800],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _isSignUp = false;
+                                _clearAllFields();
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _isSignUp ? Colors.transparent : Color(0xFFD4AF37),
+                              foregroundColor: _isSignUp ? Colors.white : Colors.black,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text('Sign In'),
+                          ),
+                        ),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              setState(() {
+                                _isSignUp = true;
+                                _clearAllFields();
+                              });
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _isSignUp ? Color(0xFFD4AF37) : Colors.transparent,
+                              foregroundColor: _isSignUp ? Colors.black : Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Text('Sign Up'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  
+                  if (_isSignUp) _buildSignUpForm(),
+                  if (!_isSignUp) _buildSignInForm(),
+                  
+                  const SizedBox(height: 20),
+                  
+                  // Demo Credentials Hint
+                  Container(
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[800]!.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFD4AF37).withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Demo Credentials:',
+                          style: TextStyle(
+                            color: Color(0xFFD4AF37),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'Email: user@tydchronos.com\nPhone: +1234567890\nUsername: tyduser\nPassword: password123',
+                          style: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSignInForm() {
+    return Column(
+      children: [
+        // Authentication Method Selector
+        _buildAuthMethodSelector(),
+        const SizedBox(height: 20),
+        
+        // Dynamic Input Field
+        _buildInputField(),
+        const SizedBox(height: 20),
+        
+        // Password Field
+        TextField(
+          controller: _passwordController,
+          obscureText: true,
+          decoration: InputDecoration(
+            labelText: 'Password',
+            labelStyle: TextStyle(color: Colors.grey[400]),
+            border: const OutlineInputBorder(),
+            filled: true,
+            fillColor: Colors.grey[800],
+            prefixIcon: const Icon(Icons.lock, color: Color(0xFFD4AF37)),
+          ),
+          style: const TextStyle(color: Colors.white),
+        ),
+        const SizedBox(height: 30),
+        
+        // Sign In Button
+        _isLoading
+            ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD4AF37)))
+            : ElevatedButton(
+                onPressed: _handleSignIn,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD4AF37),
+                  foregroundColor: Colors.black,
+                  minimumSize: const Size(double.infinity, 55),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 5,
+                ),
+                child: Text(
+                  'Sign In to TydChronos',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+      ],
+    );
+  }
+
+  Widget _buildSignUpForm() {
+    return Column(
+      children: [
+        // All three fields required for sign up
+        TextField(
+          controller: _emailController,
+          decoration: InputDecoration(
+            labelText: 'Email Address',
+            labelStyle: TextStyle(color: Colors.grey[400]),
+            border: const OutlineInputBorder(),
+            filled: true,
+            fillColor: Colors.grey[800],
+            prefixIcon: const Icon(Icons.email, color: Color(0xFFD4AF37)),
+          ),
+          style: const TextStyle(color: Colors.white),
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 16),
+        
+        TextField(
+          controller: _phoneController,
+          decoration: InputDecoration(
+            labelText: 'Phone Number',
+            labelStyle: TextStyle(color: Colors.grey[400]),
+            border: const OutlineInputBorder(),
+            filled: true,
+            fillColor: Colors.grey[800],
+            prefixIcon: const Icon(Icons.phone, color: Color(0xFFD4AF37)),
+            prefixText: '+',
+          ),
+          style: const TextStyle(color: Colors.white),
+          keyboardType: TextInputType.phone,
+        ),
+        const SizedBox(height: 16),
+        
+        TextField(
+          controller: _usernameController,
+          decoration: InputDecoration(
+            labelText: 'Username',
+            labelStyle: TextStyle(color: Colors.grey[400]),
+            border: const OutlineInputBorder(),
+            filled: true,
+            fillColor: Colors.grey[800],
+            prefixIcon: const Icon(Icons.person, color: Color(0xFFD4AF37)),
+          ),
+          style: const TextStyle(color: Colors.white),
+        ),
+        const SizedBox(height: 16),
+        
+        TextField(
+          controller: _passwordController,
+          obscureText: true,
+          decoration: InputDecoration(
+            labelText: 'Password',
+            labelStyle: TextStyle(color: Colors.grey[400]),
+            border: const OutlineInputBorder(),
+            filled: true,
+            fillColor: Colors.grey[800],
+            prefixIcon: const Icon(Icons.lock, color: Color(0xFFD4AF37)),
+          ),
+          style: const TextStyle(color: Colors.white),
+        ),
+        const SizedBox(height: 16),
+        
+        TextField(
+          controller: _confirmPasswordController,
+          obscureText: true,
+          decoration: InputDecoration(
+            labelText: 'Confirm Password',
+            labelStyle: TextStyle(color: Colors.grey[400]),
+            border: const OutlineInputBorder(),
+            filled: true,
+            fillColor: Colors.grey[800],
+            prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFFD4AF37)),
+          ),
+          style: const TextStyle(color: Colors.white),
+        ),
+        const SizedBox(height: 30),
+        
+        // Sign Up Button
+        _isLoading
+            ? const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD4AF37)))
+            : ElevatedButton(
+                onPressed: _handleSignUp,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD4AF37),
+                  foregroundColor: Colors.black,
+                  minimumSize: const Size(double.infinity, 55),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 5,
+                ),
+                child: Text(
+                  'Create Account',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+      ],
+    );
+  }
+
+  Widget _buildAuthMethodSelector() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey[800],
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedAuthMethod,
+          icon: const Icon(Icons.arrow_drop_down, color: Color(0xFFD4AF37)),
+          dropdownColor: Colors.grey[900],
+          style: const TextStyle(color: Colors.white, fontSize: 16),
+          onChanged: (String? newValue) {
+            setState(() {
+              _selectedAuthMethod = newValue!;
+              // Clear all fields when switching method
+              _emailController.clear();
+              _phoneController.clear();
+              _usernameController.clear();
+              _passwordController.clear();
+            });
+          },
+          items: <String>['email', 'phone', 'username']
+              .map<DropdownMenuItem<String>>((String value) {
+            return DropdownMenuItem<String>(
+              value: value,
+              child: Row(
+                children: [
+                  Icon(
+                    value == 'email' ? Icons.email :
+                    value == 'phone' ? Icons.phone :
+                    Icons.person,
+                    color: const Color(0xFFD4AF37),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    value == 'email' ? 'Email' :
+                    value == 'phone' ? 'Phone' :
+                    'Username',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputField() {
+    switch (_selectedAuthMethod) {
+      case 'email':
+        return TextField(
+          controller: _emailController,
+          decoration: InputDecoration(
+            labelText: 'Email Address',
+            labelStyle: TextStyle(color: Colors.grey[400]),
+            border: const OutlineInputBorder(),
+            filled: true,
+            fillColor: Colors.grey[800],
+            prefixIcon: const Icon(Icons.email, color: Color(0xFFD4AF37)),
+          ),
+          style: const TextStyle(color: Colors.white),
+          keyboardType: TextInputType.emailAddress,
+        );
+      case 'phone':
+        return TextField(
+          controller: _phoneController,
+          decoration: InputDecoration(
+            labelText: 'Phone Number',
+            labelStyle: TextStyle(color: Colors.grey[400]),
+            border: const OutlineInputBorder(),
+            filled: true,
+            fillColor: Colors.grey[800],
+            prefixIcon: const Icon(Icons.phone, color: Color(0xFFD4AF37)),
+            prefixText: '+',
+          ),
+          style: const TextStyle(color: Colors.white),
+          keyboardType: TextInputType.phone,
+        );
+      case 'username':
+        return TextField(
+          controller: _usernameController,
+          decoration: InputDecoration(
+            labelText: 'Username',
+            labelStyle: TextStyle(color: Colors.grey[400]),
+            border: const OutlineInputBorder(),
+            filled: true,
+            fillColor: Colors.grey[800],
+            prefixIcon: const Icon(Icons.person, color: Color(0xFFD4AF37)),
+          ),
+          style: const TextStyle(color: Colors.white),
+        );
+      default:
+        return const SizedBox();
+    }
+  }
+
+  Future<void> _handleSignIn() async {
+    if (!_validateSignInInputs()) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final authService = Provider.of<AuthenticationService>(context, listen: false);
+      
+      String identifier = '';
+      switch (_selectedAuthMethod) {
+        case 'email':
+          identifier = _emailController.text;
+          break;
+        case 'phone':
+          identifier = _phoneController.text;
+          break;
+        case 'username':
+          identifier = _usernameController.text;
+          break;
+      }
+      
+      final success = await authService.authenticate(identifier, _passwordController.text);
+      
+      if (success) {
+        print('✅ Authentication successful for: $identifier');
+        
+        // Navigate to home page after successful authentication
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const TydChronosHomePage()),
+        );
+      } else {
+        _showErrorDialog('Invalid credentials. Please try again.');
+      }
+    } catch (e) {
+      _showErrorDialog('Authentication failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _handleSignUp() async {
+    if (!_validateSignUpInputs()) return;
+    
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final authService = Provider.of<AuthenticationService>(context, listen: false);
+      
+      final result = await authService.register(
+        _emailController.text,
+        _phoneController.text,
+        _usernameController.text,
+        _passwordController.text,
+        _confirmPasswordController.text,
+      );
+      
+      if (result['success'] == true) {
+        print('✅ Registration successful for: ${_usernameController.text}');
+        
+        // Show wallet creation success dialog with mnemonic and address
+        _showWalletCreationSuccess(
+          result['mnemonic'] ?? '',
+          result['walletAddress'] ?? '',
+          result['message'] ?? 'Account created successfully!'
+        );
+      } else {
+        _showErrorDialog(result['message'] ?? 'Registration failed');
+      }
+    } catch (e) {
+      _showErrorDialog('Registration failed: $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  void _showWalletCreationSuccess(String mnemonic, String walletAddress, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text('Wallet Created Successfully!', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(message, style: TextStyle(color: Colors.white)),
+              const SizedBox(height: 20),
+              Text(
+                '🔐 Your 12-Word Recovery Phrase:',
+                style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Color(0xFFD4AF37)),
+                ),
+                child: Text(
+                  mnemonic,
+                  style: TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '⚠️ IMPORTANT SECURITY WARNING:',
+                style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+              Text(
+                'Write down these 12 words and store them in a secure location. '
+                'Never share them with anyone. This phrase is the only way to recover your wallet.',
+                style: TextStyle(color: Colors.orange, fontSize: 10),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '💰 Your TydChronos Wallet Address:',
+                style: TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Color(0xFFD4AF37)),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        walletAddress,
+                        style: TextStyle(color: Colors.grey[300], fontSize: 10, fontFamily: 'Monospace'),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.copy, size: 16, color: Color(0xFFD4AF37)),
+                      onPressed: () {
+                        Clipboard.setData(ClipboardData(text: walletAddress));
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Wallet address copied to clipboard'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                '📝 Instructions:',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '1. Save your 12-word phrase securely\n'
+                '2. Copy your wallet address\n'
+                '3. Go to OVERVIEW page\n'
+                '4. Paste your address in "Your TydChronos Address" section',
+                style: TextStyle(color: Colors.grey, fontSize: 10),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // Navigate to home page
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const TydChronosHomePage()),
+              );
+            },
+            child: Text('I have saved my recovery phrase', style: TextStyle(color: Color(0xFFD4AF37))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _validateSignInInputs() {
+    switch (_selectedAuthMethod) {
+      case 'email':
+        if (_emailController.text.isEmpty || !_emailController.text.contains('@')) {
+          _showErrorDialog('Please enter a valid email address');
+          return false;
+        }
+        break;
+      case 'phone':
+        if (_phoneController.text.isEmpty || _phoneController.text.length < 10) {
+          _showErrorDialog('Please enter a valid phone number');
+          return false;
+        }
+        break;
+      case 'username':
+        if (_usernameController.text.isEmpty || _usernameController.text.length < 3) {
+          _showErrorDialog('Please enter a valid username (min 3 characters)');
+          return false;
+        }
+        break;
+    }
+    
+    if (_passwordController.text.isEmpty) {
+      _showErrorDialog('Please enter your password');
+      return false;
+    }
+    
+    return true;
+  }
+
+  bool _validateSignUpInputs() {
+    if (_emailController.text.isEmpty || !_emailController.text.contains('@')) {
+      _showErrorDialog('Please enter a valid email address');
+      return false;
+    }
+    
+    if (_phoneController.text.isEmpty || _phoneController.text.length < 10) {
+      _showErrorDialog('Please enter a valid phone number');
+      return false;
+    }
+    
+    if (_usernameController.text.isEmpty || _usernameController.text.length < 3) {
+      _showErrorDialog('Please enter a valid username (min 3 characters)');
+      return false;
+    }
+    
+    if (_passwordController.text.isEmpty || _passwordController.text.length < 6) {
+      _showErrorDialog('Password must be at least 6 characters');
+      return false;
+    }
+    
+    if (_passwordController.text != _confirmPasswordController.text) {
+      _showErrorDialog('Passwords do not match');
+      return false;
+    }
+    
+    return true;
+  }
+
+  void _clearAllFields() {
+    _emailController.clear();
+    _phoneController.clear();
+    _usernameController.clear();
+    _passwordController.clear();
+    _confirmPasswordController.clear();
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Authentication Error', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _phoneController.dispose();
+    _usernameController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+}
 
 // ==================== NETWORK MODE MANAGER ====================
 class NetworkModeManager extends ChangeNotifier {
   bool _isTestnetMode = false;
   final PriceFeedService _priceService = PriceFeedService();
   Map<String, double> _livePrices = {};
-  Map<String, double> _lockedValues = {}; // For volatility protection
+  final Map<String, double> _lockedValues = {}; // For volatility protection
   
   bool get isTestnetMode => _isTestnetMode;
   String get currentNetwork => _isTestnetMode ? 'Testnet' : 'Mainnet';
@@ -118,21 +1040,21 @@ class TydChronosEcosystemService extends ChangeNotifier {
   bool _marketMakingBotActive = false;
   
   // Bot trading data
-  Map<String, dynamic> _bot1Performance = {
+  final Map<String, dynamic> _bot1Performance = {
     'tradingBalance': 0.5,
     'profit': 250.0,
     'successRate': 75.0,
     'totalTrades': 45
   };
   
-  Map<String, dynamic> _bot2Performance = {
+  final Map<String, dynamic> _bot2Performance = {
     'tradingBalance': 0.3,
     'profit': 180.0,
     'successRate': 68.0,
     'totalTrades': 32
   };
   
-  Map<String, dynamic> _bot3Performance = {
+  final Map<String, dynamic> _bot3Performance = {
     'tradingBalance': 0.4,
     'profit': 320.0,
     'successRate': 82.0,
@@ -461,7 +1383,7 @@ class TydChronosEcosystemButton extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text(
+        title: Text(
           'TydChronos Ecosystem',
           style: TextStyle(color: Color(0xFFD4AF37)),
         ),
@@ -470,7 +1392,7 @@ class TydChronosEcosystemButton extends StatelessWidget {
           children: [
             const Icon(Icons.account_balance_wallet, color: Color(0xFFD4AF37), size: 50),
             const SizedBox(height: 16),
-            const Text('TydChronos Wallet & DApp Integration', 
+            Text('TydChronos Wallet & DApp Integration', 
                      style: TextStyle(color: Colors.white)),
             const SizedBox(height: 20),
             ElevatedButton(
@@ -482,7 +1404,7 @@ class TydChronosEcosystemButton extends StatelessWidget {
                 backgroundColor: const Color(0xFFD4AF37),
                 foregroundColor: Colors.black,
               ),
-              child: const Text('Connect to TydChronos DApp'),
+              child: Text('Connect to TydChronos DApp'),
             ),
           ],
         ),
@@ -591,6 +1513,10 @@ void main() async {
   try {
     await _debugCheckAssets();
 
+    // Initialize DApp services
+    DAppIntegrationSimple.initialize();
+    DAppIntegrationWrapper.initialize();
+
     // WEB COMPATIBILITY FIX: Use non-blocking initialization for web
     if (kIsWeb) {
       // For web: initialize services in background without blocking app startup
@@ -598,8 +1524,12 @@ void main() async {
         MultiProvider(
           providers: [
             ChangeNotifierProvider(create: (context) => TydChronosEcosystemService()..initializeWeb()),
-            ChangeNotifierProvider(create: (context) => NetworkModeManager()),
+            ChangeNotifierProvider(create: (context) => AuthenticationService()),
+            ChangeNotifierProvider(create: (context) => WalletManagerService()),
             ChangeNotifierProvider(create: (context) => CurrencyManager()),
+            ChangeNotifierProvider(create: (context) => DAppIntegrationManager()..initialize()),
+            ChangeNotifierProvider(create: (context) => DAppBridgeService()),
+            ChangeNotifierProvider(create: (context) => WalletConnectService()),
           ],
           child: const TydChronosWalletApp(),
         ),
@@ -610,20 +1540,24 @@ void main() async {
         MultiProvider(
           providers: [
             ChangeNotifierProvider(create: (context) => TydChronosEcosystemService()..initialize()),
-            ChangeNotifierProvider(create: (context) => NetworkModeManager()),
+            ChangeNotifierProvider(create: (context) => AuthenticationService()),
+            ChangeNotifierProvider(create: (context) => WalletManagerService()),
             ChangeNotifierProvider(create: (context) => CurrencyManager()),
+            ChangeNotifierProvider(create: (context) => DAppIntegrationManager()..initialize()),
+            ChangeNotifierProvider(create: (context) => DAppBridgeService()),
+            ChangeNotifierProvider(create: (context) => WalletConnectService()),
           ],
           child: const TydChronosWalletApp(),
         ),
       );
     }
   } catch (error, stackTrace) {
-    log('🚨 TydChronos Wallet failed to start: $error');
-    log('Stack trace: $stackTrace');
+    developer.log('🚨 TydChronos Wallet failed to start: $error');
+    developer.log('Stack trace: $stackTrace');
 
     // Fallback UI for production
     runApp(
-      MaterialApp(
+      const MaterialApp(
         home: Scaffold(
           body: Center(
             child: Column(
@@ -654,11 +1588,27 @@ class TydChronosWalletApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'TydChronos Wallet',
-      theme: _buildBlackGoldTheme(),
-      home: const SplashScreen(),
-      debugShowCheckedModeBanner: false,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthenticationService>(
+          create: (context) => AuthenticationService(),
+        ),
+        ChangeNotifierProvider<WalletManagerService>(
+          create: (context) => WalletManagerService(),
+        ),
+        ChangeNotifierProvider<NetworkModeManager>(
+          create: (context) => NetworkModeManager(),
+        ),
+        ChangeNotifierProvider<DAppIntegrationManager>(
+          create: (context) => DAppIntegrationManager(),
+        ),
+      ],
+      child: MaterialApp(
+        title: 'TydChronos Wallet',
+        theme: _buildBlackGoldTheme(),
+        home: const SplashScreen(), // Start with SplashScreen
+        debugShowCheckedModeBanner: false,
+      ),
     );
   }
 
@@ -749,139 +1699,6 @@ class BalanceConsumer extends StatelessWidget {
       context,
       BalanceProvider.of(context),
       null,
-    );
-  }
-}
-
-// ==================== SPLASH SCREEN ====================
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  bool _initialized = false;
-  bool _navigationCompleted = false;
-
-  @override
-  void initState() {
-    super.initState();
-    print('🔄 SplashScreen initState called');
-    _initializeApp();
-  }
-
-  Future<void> _initializeApp() async {
-    try {
-      print('🔄 Starting app initialization...');
-      
-      // Initialize network mode manager
-      final networkMode = Provider.of<NetworkModeManager>(context, listen: false);
-      await networkMode.fetchLivePrices();
-      
-      setState(() {
-        _initialized = true;
-      });
-      
-      print('✅ App initialization completed, waiting 3 seconds...');
-      
-      // Wait for 3 seconds and then navigate
-      await Future.delayed(const Duration(seconds: 3));
-      
-      if (mounted && !_navigationCompleted) {
-        _navigationCompleted = true;
-        print('🚀 Navigating to TydChronosHomePage...');
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const TydChronosHomePage()),
-        );
-      } else {
-        print('⚠️ Navigation skipped: mounted=$mounted, navigationCompleted=$_navigationCompleted');
-      }
-    } catch (e) {
-      print('❌ Error during splash screen initialization: $e');
-      // Even if there's an error, navigate to home page after delay
-      if (mounted && !_navigationCompleted) {
-        _navigationCompleted = true;
-        await Future.delayed(const Duration(seconds: 3));
-        print('🚀 Emergency navigation to TydChronosHomePage...');
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const TydChronosHomePage()),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    print('🔄 Building SplashScreen, initialized: $_initialized');
-    
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: SingleChildScrollView(
-        child: Container(
-          constraints: BoxConstraints(
-            minHeight: MediaQuery.of(context).size.height,
-          ),
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 40.0, horizontal: 20.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const TydChronosLogo(size: 150, withBackground: true, isAppBarIcon: false),
-                  const SizedBox(height: 30),
-                  _initialized 
-                      ? const Icon(Icons.check_circle, color: Colors.green, size: 30)
-                      : const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD4AF37)),
-                          strokeWidth: 3,
-                        ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'TydChronos Wallet',
-                    style: TextStyle(
-                      color: Color(0xFFD4AF37),
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Advanced Banking & Cryptocurrency Platform',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontSize: 14,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _initialized ? 'Ready! Launching app...' : 'Loading TydChronos Ecosystem...',
-                    style: const TextStyle(
-                      color: Colors.grey,
-                      fontSize: 12,
-                    ),
-                  ),
-                  if (!_initialized) ...[
-                    const SizedBox(height: 10),
-                    const Text(
-                      'Please wait while we secure your wallet...',
-                      style: TextStyle(
-                        color: Colors.grey,
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
@@ -1047,7 +1864,6 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
     // Hide the web loading screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       try {
-        js.context.callMethod('hideLoadingScreen', []);
         print('✅ Web loading screen hidden');
       } catch (e) {
         print('⚠️ Could not hide web loading screen: $e');
@@ -1063,87 +1879,267 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
       ],
       child: BalanceProvider(
         balanceManager: _balanceManager,
-        child: Scaffold(
-          backgroundColor: Colors.black,
-          appBar: AppBar(
+        child: DAppIntegrationWrapper.wrapWithDAppSupport(
+          Scaffold(
             backgroundColor: Colors.black,
-            elevation: 0,
-            leading: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TydChronosLogo(size: 35, withBackground: false, isAppBarIcon: true),
-            ),
-            title: const Text(
-              'TydChronos Wallet',
-              style: TextStyle(
-                color: Color(0xFFD4AF37),
-                fontWeight: FontWeight.bold,
+            appBar: AppBar(
+              backgroundColor: Colors.black,
+              elevation: 0,
+              leading: const Padding(
+                padding: EdgeInsets.all(8.0),
+                child: TydChronosLogo(size: 35, withBackground: false, isAppBarIcon: true),
               ),
-            ),
-            actions: [
-              Consumer<NetworkModeManager>(
-                builder: (context, networkMode, child) {
-                  return IconButton(
-                    icon: Icon(
-                      networkMode.isTestnetMode ? Icons.security : Icons.attach_money,
-                      color: networkMode.isTestnetMode ? Colors.orange : Colors.green,
-                    ),
-                    onPressed: () {
-                      networkMode.toggleNetworkMode();
-                    },
-                    tooltip: 'Switch to ${networkMode.isTestnetMode ? 'Mainnet' : 'Testnet'}',
-                  );
-                },
+              title: Text(
+                'TydChronos Wallet',
+                style: TextStyle(
+                  color: Color(0xFFD4AF37),
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-              Consumer<TydChronosEcosystemService>(
-                builder: (context, ecosystem, child) {
-                  if (ecosystem.ethereumAddress != null) {
+              actions: [
+                Consumer<NetworkModeManager>(
+                  builder: (context, networkMode, child) {
                     return IconButton(
-                      icon: const Icon(Icons.qr_code, color: Color(0xFFD4AF37)),
+                      icon: Icon(
+                        networkMode.isTestnetMode ? Icons.security : Icons.attach_money,
+                        color: networkMode.isTestnetMode ? Colors.orange : Colors.green,
+                      ),
                       onPressed: () {
-                        _showAddressDialogWithQR(context, ecosystem.ethereumAddress!);
+                        networkMode.toggleNetworkMode();
                       },
-                      tooltip: 'Your TydChronos Address',
+                      tooltip: 'Switch to ${networkMode.isTestnetMode ? 'Mainnet' : 'Testnet'}',
                     );
-                  }
-                  return const SizedBox();
-                },
-              ),
-              const TydChronosEcosystemButton(),
-              Builder(
-                builder: (context) {
-                  final balanceManager = BalanceProvider.of(context);
-                  return IconButton(
-                    icon: Icon(
-                      balanceManager.balancesVisible ? Icons.visibility : Icons.visibility_off,
-                      color: const Color(0xFFD4AF37),
-                    ),
-                    onPressed: () {
-                      balanceManager.toggleBalances();
-                    },
-                    tooltip: balanceManager.balancesVisible ? 'Hide Balances' : 'Show Balances',
-                  );
-                },
-              ),
-            ],
+                  },
+                ),
+                Consumer<TydChronosEcosystemService>(
+                  builder: (context, ecosystem, child) {
+                    if (ecosystem.ethereumAddress != null) {
+                      return IconButton(
+                        icon: const Icon(Icons.qr_code, color: Color(0xFFD4AF37)),
+                        onPressed: () {
+                          _showAddressDialogWithQR(context, ecosystem.ethereumAddress!);
+                        },
+                        tooltip: 'Your TydChronos Address',
+                      );
+                    }
+                    return const SizedBox();
+                  },
+                ),
+                const TydChronosEcosystemButton(),
+                Builder(
+                  builder: (context) {
+                    final balanceManager = BalanceProvider.of(context);
+                    return IconButton(
+                      icon: Icon(
+                        balanceManager.balancesVisible ? Icons.visibility : Icons.visibility_off,
+                        color: const Color(0xFFD4AF37),
+                      ),
+                      onPressed: () {
+                        balanceManager.toggleBalances();
+                      },
+                      tooltip: balanceManager.balancesVisible ? 'Hide Balances' : 'Show Balances',
+                    );
+                  },
+                ),
+                // Add DApp connections button
+                Consumer<DAppIntegrationManager>(
+                  builder: (context, dappManager, child) {
+                    return IconButton(
+                      icon: const Icon(Icons.link, color: Color(0xFFD4AF37)),
+                      onPressed: () {
+                        _showDAppConnectionsPanel(context, dappManager);
+                      },
+                      tooltip: 'DApp Connections',
+                    );
+                  },
+                ),
+                // Add logout button to home page
+                IconButton(
+                  icon: const Icon(Icons.logout, color: Color(0xFFD4AF37)),
+                  onPressed: () {
+                    _logout(context);
+                  },
+                  tooltip: 'Logout',
+                ),
+              ],
+            ),
+            body: _getCurrentScreen(),
+            bottomNavigationBar: BottomNavigationBar(
+              backgroundColor: Colors.black,
+              selectedItemColor: const Color(0xFFD4AF37),
+              unselectedItemColor: Colors.grey.shade600,
+              currentIndex: _selectedIndex,
+              onTap: _onItemTapped,
+              type: BottomNavigationBarType.fixed,
+              items: const [
+                BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'OVERVIEW'),
+                BottomNavigationBarItem(icon: Icon(Icons.currency_bitcoin), label: 'CRYPTO'),
+                BottomNavigationBarItem(icon: Icon(Icons.auto_awesome_motion), label: 'TRADING'),
+                BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'E-WALLET'),
+                BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'SETTINGS'),
+              ],
+            ),
           ),
-          body: _getCurrentScreen(),
-          bottomNavigationBar: BottomNavigationBar(
-            backgroundColor: Colors.black,
-            selectedItemColor: const Color(0xFFD4AF37),
-            unselectedItemColor: Colors.grey.shade600,
-            currentIndex: _selectedIndex,
-            onTap: _onItemTapped,
-            type: BottomNavigationBarType.fixed,
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'OVERVIEW'),
-              BottomNavigationBarItem(icon: Icon(Icons.currency_bitcoin), label: 'CRYPTO'),
-              BottomNavigationBarItem(icon: Icon(Icons.auto_awesome_motion), label: 'TRADING'),
-              BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'E-WALLET'),
-              BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'SETTINGS'),
-            ],
-          ),
+          context,
         ),
       ),
+    );
+  }
+
+  void _showDAppConnectionsPanel(BuildContext context, DAppIntegrationManager dappManager) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.grey[900],
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'DApp Connections',
+                style: TextStyle(
+                  color: Color(0xFFD4AF37),
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 16),
+              DAppConnectionsPanel(),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _showWalletConnectDialog(context, dappManager);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFD4AF37),
+                  foregroundColor: Colors.black,
+                ),
+                child: const Text('Connect New DApp'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showWalletConnectDialog(BuildContext context, DAppIntegrationManager dappManager) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text('Connect to DApp', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Connect using WalletConnect or direct DApp connection', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _simulateDAppConnection(context, dappManager);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFD4AF37),
+                foregroundColor: Colors.black,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              child: const Text('Simulate DApp Connection'),
+            ),
+            const SizedBox(height: 12),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _showQRScanner(context, dappManager);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 50),
+              ),
+              child: const Text('Scan QR Code'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _simulateDAppConnection(BuildContext context, DAppIntegrationManager dappManager) {
+    dappManager.setPendingConnection('Uniswap V3');
+    
+    // Show connection dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => DAppConnectionDialog(
+        dappName: 'Uniswap V3',
+        network: 'Ethereum Mainnet',
+        onConfirm: () {
+          dappManager.completeConnection();
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Connected to Uniswap V3'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+        onReject: () {
+          dappManager.clearPendingConnection();
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Connection rejected'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showQRScanner(BuildContext context, DAppIntegrationManager dappManager) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text('QR Scanner', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 200,
+              height: 200,
+              color: Colors.grey[800],
+              child: const Center(
+                child: Icon(Icons.qr_code_scanner, size: 80, color: Colors.grey),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Scan WalletConnect QR code', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _simulateDAppConnection(context, dappManager);
+              },
+              child: const Text('Use Demo Connection'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _logout(BuildContext context) {
+    final authService = Provider.of<AuthenticationService>(context, listen: false);
+    authService.logout();
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const AuthScreen()),
     );
   }
 
@@ -1174,7 +2170,7 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
       case 3:
         return EWalletScreen(fiatWallet: _fiatWallet);
       case 4:
-        return SettingsSecurityScreen();
+        return const SettingsSecurityScreen();
       default:
         return OverviewScreen(
           cryptoWallet: _cryptoWallet,
@@ -1189,7 +2185,7 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text(
+        title: Text(
           'Your TydChronos Address',
           style: TextStyle(color: Color(0xFFD4AF37)),
         ),
@@ -1246,7 +2242,7 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Scan QR code or copy address to receive funds',
               style: TextStyle(color: Colors.grey, fontSize: 12),
               textAlign: TextAlign.center,
@@ -1256,7 +2252,7 @@ class _TydChronosHomePageState extends State<TydChronosHomePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close', style: TextStyle(color: Color(0xFFD4AF37))),
+            child: Text('Close', style: TextStyle(color: Color(0xFFD4AF37))),
           ),
         ],
       ),
@@ -1282,6 +2278,7 @@ class OverviewScreen extends StatelessWidget {
     final networkMode = Provider.of<NetworkModeManager>(context);
     final ecosystem = Provider.of<TydChronosEcosystemService>(context);
     final currencyManager = Provider.of<CurrencyManager>(context);
+    final dappManager = Provider.of<DAppIntegrationManager>(context);
     
     double totalNetWorth = networkMode.getAdjustedBalance(
       cryptoWallet.totalValueUSD + fiatWallet.balance + (tradingBot.tradingBalance * 3000)
@@ -1293,6 +2290,52 @@ class OverviewScreen extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
+              // DApp Connection Status
+              if (dappManager.connectedDApp != null)
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green),
+                  ),
+                  padding: const EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.link, color: Colors.green),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Connected to ${dappManager.connectedDApp}',
+                              style: const TextStyle(
+                                color: Colors.green,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'DApp is ready to interact',
+                              style: TextStyle(
+                                color: Colors.green.withOpacity(0.8),
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, size: 16),
+                        color: Colors.green,
+                        onPressed: () {
+                          dappManager.clearPendingConnection();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+
               Container(
                 decoration: BoxDecoration(
                   color: Colors.grey[900],
@@ -1324,7 +2367,7 @@ class OverviewScreen extends StatelessWidget {
                           ),
                           Text(
                             networkMode.currentNetworkSubtitle,
-                            style: TextStyle(
+                            style: const TextStyle(
                               color: Colors.grey,
                               fontSize: 12,
                             ),
@@ -1359,7 +2402,7 @@ class OverviewScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    const Text(
+                    Text(
                       'Total Net Worth',
                       style: TextStyle(
                         color: Colors.grey,
@@ -1412,9 +2455,9 @@ class OverviewScreen extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: _buildBalanceCard(
-                      'TydChronos DApp', 
-                      'Connected', 
-                      const Color(0xFFD4AF37)
+                      'DApp Status', 
+                      dappManager.connectedDApp != null ? 'Connected' : 'Ready', 
+                      dappManager.connectedDApp != null ? Colors.green : const Color(0xFFD4AF37)
                     ),
                   ),
                 ],
@@ -1433,11 +2476,11 @@ class OverviewScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    const Row(
                       children: [
-                        const Icon(Icons.currency_bitcoin, color: Color(0xFFD4AF37)),
-                        const SizedBox(width: 8),
-                        const Text(
+                        Icon(Icons.currency_bitcoin, color: Color(0xFFD4AF37)),
+                        SizedBox(width: 8),
+                        Text(
                           'TydChronos Ecosystem',
                           style: TextStyle(
                             color: Colors.white,
@@ -1450,14 +2493,14 @@ class OverviewScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     
                     if (ecosystem.ethereumAddress == null) ...[
-                      const Text(
+                      Text(
                         'No TydChronos wallet found. Initialize to access full ecosystem.',
                         style: TextStyle(color: Colors.grey),
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
                         icon: const Icon(Icons.add),
-                        label: const Text('Initialize TydChronos Wallet'),
+                        label: Text('Initialize TydChronos Wallet'),
                         onPressed: () async {
                           try {
                             await ecosystem.initializeWallet();
@@ -1486,7 +2529,7 @@ class OverviewScreen extends StatelessWidget {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Your TydChronos Address:', style: TextStyle(color: Colors.grey)),
+                          Text('Your TydChronos Address:', style: TextStyle(color: Colors.grey)),
                           const SizedBox(height: 8),
                           Container(
                             padding: const EdgeInsets.all(12),
@@ -1548,7 +2591,7 @@ class OverviewScreen extends StatelessWidget {
                               foregroundColor: Colors.black,
                               minimumSize: const Size(double.infinity, 50),
                             ),
-                            child: const Text('Execute Protected Transaction'),
+                            child: Text('Execute Protected Transaction'),
                           ),
                         ],
                       ),
@@ -1568,13 +2611,13 @@ class OverviewScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Volatility Protected Transaction', style: TextStyle(color: Color(0xFFD4AF37))),
+        title: Text('Volatility Protected Transaction', style: TextStyle(color: Color(0xFFD4AF37))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Send 0.01 ETH with price protection', style: TextStyle(color: Colors.white)),
+            Text('Send 0.01 ETH with price protection', style: TextStyle(color: Colors.white)),
             const SizedBox(height: 10),
-            const Text('🔒 Value locked until blockchain confirmation', style: TextStyle(color: Colors.green, fontSize: 12)),
+            Text('🔒 Value locked until blockchain confirmation', style: TextStyle(color: Colors.green, fontSize: 12)),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () async {
@@ -1593,7 +2636,7 @@ class OverviewScreen extends StatelessWidget {
                   _showErrorDialog(context, e.toString());
                 }
               },
-              child: const Text('Confirm Protected Transaction'),
+              child: Text('Confirm Protected Transaction'),
             ),
           ],
         ),
@@ -1606,19 +2649,19 @@ class OverviewScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Transaction Successful', style: TextStyle(color: Colors.green)),
+        title: Text('Transaction Successful', style: TextStyle(color: Colors.green)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('TX Hash: ${result['txHash']}', style: const TextStyle(color: Colors.white)),
             const SizedBox(height: 10),
-            const Text('✅ Value protection active', style: TextStyle(color: Colors.green, fontSize: 12)),
+            Text('✅ Value protection active', style: TextStyle(color: Colors.green, fontSize: 12)),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
+            child: Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
           ),
         ],
       ),
@@ -1630,12 +2673,12 @@ class OverviewScreen extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Transaction Failed', style: TextStyle(color: Colors.red)),
+        title: Text('Transaction Failed', style: TextStyle(color: Colors.red)),
         content: Text(error, style: const TextStyle(color: Colors.white)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
+            child: Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
           ),
         ],
       ),
@@ -1677,7 +2720,7 @@ class OverviewScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Multi-Chain Assets',
           style: TextStyle(
             color: Colors.white,
@@ -1790,6 +2833,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
     final ecosystem = Provider.of<TydChronosEcosystemService>(context);
     final networkMode = Provider.of<NetworkModeManager>(context);
     final currencyManager = Provider.of<CurrencyManager>(context);
+    final dappManager = Provider.of<DAppIntegrationManager>(context);
 
     return Scaffold(
       backgroundColor: Colors.black,
@@ -1797,7 +2841,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
         backgroundColor: Colors.black,
         foregroundColor: const Color(0xFFD4AF37),
         elevation: 0,
-        title: const Text(
+        title: Text(
           'CRYPTO',
           style: TextStyle(
             color: Color(0xFFD4AF37),
@@ -1823,9 +2867,21 @@ class _CryptoScreenState extends State<CryptoScreen> {
             onPressed: _showCurrencySelector,
             color: const Color(0xFFD4AF37),
           ),
+          // DApp Bridge Button
+          Consumer<DAppIntegrationManager>(
+            builder: (context, dappManager, child) {
+              return IconButton(
+                icon: const Icon(Icons.account_balance_wallet, color: Color(0xFFD4AF37)),
+                onPressed: () {
+                  _showDAppBridgeDialog(context, dappManager);
+                },
+                tooltip: 'DApp Bridge',
+              );
+            },
+          ),
         ],
       ),
-      body: _cryptoSelectedIndex == 0 ? _buildCryptoWalletTab(networkMode, ecosystem, currencyManager) : _buildAITradingTab(networkMode, ecosystem, currencyManager),
+      body: _cryptoSelectedIndex == 0 ? _buildCryptoWalletTab(networkMode, ecosystem, currencyManager, dappManager) : _buildAITradingTab(networkMode, ecosystem, currencyManager),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: Colors.black,
         selectedItemColor: const Color(0xFFD4AF37),
@@ -1841,7 +2897,87 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  Widget _buildCryptoWalletTab(NetworkModeManager networkMode, TydChronosEcosystemService ecosystem, CurrencyManager currencyManager) {
+  void _showDAppBridgeDialog(BuildContext context, DAppIntegrationManager dappManager) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text('DApp Bridge Service', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Multi-chain DApp connectivity', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 16),
+            _buildNetworkInfo('Current Network', dappManager.dappBridge.currentNetwork),
+            const SizedBox(height: 12),
+            _buildNetworkInfo('Account', dappManager.dappBridge.currentAccount?.hex ?? 'Not connected'),
+            const SizedBox(height: 12),
+            _buildNetworkInfo('Status', 'Ready for DApp interactions'),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _showSupportedNetworks(context, dappManager);
+              },
+              child: Text('View Supported Networks'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNetworkInfo(String label, String value) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(color: Colors.grey)),
+        Text(value, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  void _showSupportedNetworks(BuildContext context, DAppIntegrationManager dappManager) {
+    final networks = dappManager.dappBridge.getSupportedNetworks();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text('Supported Networks', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Container(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: networks.length,
+            itemBuilder: (context, index) {
+              final network = networks[index];
+              return ListTile(
+                leading: network.isL2 ? const Icon(Icons.layers, color: Colors.blue) : const Icon(Icons.public, color: Colors.green),
+                title: Text(network.name, style: const TextStyle(color: Colors.white)),
+                subtitle: Text('Chain ID: ${network.chainId}', style: const TextStyle(color: Colors.grey)),
+                trailing: dappManager.dappBridge.currentNetwork == network.name.toLowerCase() 
+                    ? const Icon(Icons.check_circle, color: Colors.green)
+                    : null,
+                onTap: () {
+                  // Switch network logic would go here
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Switching to ${network.name}'),
+                      backgroundColor: Colors.blue,
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCryptoWalletTab(NetworkModeManager networkMode, TydChronosEcosystemService ecosystem, CurrencyManager currencyManager, DAppIntegrationManager dappManager) {
     return BalanceConsumer(
       builder: (context, balanceManager, child) {
         return SingleChildScrollView(
@@ -1856,7 +2992,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    const Text(
+                    Text(
                       'Total Crypto Value',
                       style: TextStyle(color: Colors.grey, fontSize: 16),
                     ),
@@ -1887,7 +3023,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                     _showReceiveDialog(ecosystem);
                   }),
                   _buildCryptoActionItem(Icons.swap_horiz, 'Swap', Colors.blue, () {
-                    _showSwapDialog(ecosystem, networkMode, context);
+                    _showSwapDialog(ecosystem, networkMode, context, dappManager);
                   }),
                   _buildCryptoActionItem(Icons.account_balance_wallet, 'Bridge', Colors.purple, () {
                     _showBridgeDialog(ecosystem, networkMode, context);
@@ -1913,8 +3049,8 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   _buildCryptoActionItem(Icons.qr_code_scanner, 'Scan', Colors.indigo, () {
                     _showScanDialog(context);
                   }),
-                  _buildCryptoActionItem(Icons.more_horiz, 'More', Colors.grey, () {
-                    // Additional actions
+                  _buildCryptoActionItem(Icons.link, 'DApp Connect', Colors.cyan, () {
+                    _showDAppConnectDialog(context, dappManager);
                   }),
                 ],
               ),
@@ -1981,6 +3117,77 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
+  void _showDAppConnectDialog(BuildContext context, DAppIntegrationManager dappManager) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: Text('Connect to DApp', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Connect to decentralized applications', style: TextStyle(color: Colors.white)),
+            const SizedBox(height: 16),
+            _buildDAppOption('Uniswap V3', 'Decentralized Exchange', Icons.swap_horiz, () {
+              _connectToDApp(context, dappManager, 'Uniswap V3');
+            }),
+            const SizedBox(height: 12),
+            _buildDAppOption('OpenSea', 'NFT Marketplace', Icons.image, () {
+              _connectToDApp(context, dappManager, 'OpenSea');
+            }),
+            const SizedBox(height: 12),
+            _buildDAppOption('Aave', 'Lending Protocol', Icons.account_balance, () {
+              _connectToDApp(context, dappManager, 'Aave');
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDAppOption(String name, String description, IconData icon, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: const Color(0xFFD4AF37)),
+      title: Text(name, style: const TextStyle(color: Colors.white)),
+      subtitle: Text(description, style: const TextStyle(color: Colors.grey)),
+      trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
+      onTap: onTap,
+    );
+  }
+
+  void _connectToDApp(BuildContext context, DAppIntegrationManager dappManager, String dappName) {
+    dappManager.setPendingConnection(dappName);
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => DAppConnectionDialog(
+        dappName: dappName,
+        network: 'Ethereum Mainnet',
+        onConfirm: () {
+          dappManager.completeConnection();
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Connected to $dappName'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        },
+        onReject: () {
+          dappManager.clearPendingConnection();
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Connection rejected'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   // Send ETH to Bot Dialog
   void _showSendToBotDialog(BuildContext context, TydChronosEcosystemService ecosystem, String botName, String botId, double defaultAmount) {
     double amount = defaultAmount;
@@ -1995,7 +3202,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Fund your trading bot with ETH', style: TextStyle(color: Colors.white)),
+                Text('Fund your trading bot with ETH', style: TextStyle(color: Colors.white)),
                 const SizedBox(height: 16),
                 TextField(
                   decoration: const InputDecoration(
@@ -2011,7 +3218,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                 const SizedBox(height: 12),
                 Text('Current balance: ${_getBotBalance(ecosystem, botId)} ETH', style: const TextStyle(color: Colors.grey, fontSize: 12)),
                 const SizedBox(height: 16),
-                const Text('🚀 Boost your trading performance', style: TextStyle(color: Colors.green, fontSize: 12)),
+                Text('🚀 Boost your trading performance', style: TextStyle(color: Colors.green, fontSize: 12)),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: () async {
@@ -2101,11 +3308,11 @@ class _CryptoScreenState extends State<CryptoScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Transfer to TydChronos Wallet', style: TextStyle(color: Color(0xFFD4AF37))),
+        title: Text('Transfer to TydChronos Wallet', style: TextStyle(color: Color(0xFFD4AF37))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Transfer fiat funds from Crypto wallet to E-wallet', style: TextStyle(color: Colors.white)),
+            Text('Transfer fiat funds from Crypto wallet to E-wallet', style: TextStyle(color: Colors.white)),
             const SizedBox(height: 16),
             _buildAssetSelector('Select Asset', 'USD'),
             const SizedBox(height: 12),
@@ -2117,9 +3324,9 @@ class _CryptoScreenState extends State<CryptoScreen> {
               style: TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 12),
-            const Text('Transfer to: E-Wallet', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            Text('Transfer to: E-Wallet', style: TextStyle(color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 16),
-            const Text('💸 Instant transfer between wallets', style: TextStyle(color: Colors.green, fontSize: 12)),
+            Text('💸 Instant transfer between wallets', style: TextStyle(color: Colors.green, fontSize: 12)),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
@@ -2131,7 +3338,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   ),
                 );
               },
-              child: const Text('Transfer Now'),
+              child: Text('Transfer Now'),
             ),
           ],
         ),
@@ -2145,11 +3352,11 @@ class _CryptoScreenState extends State<CryptoScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Cross-Chain Bridge', style: TextStyle(color: Color(0xFFD4AF37))),
+        title: Text('Cross-Chain Bridge', style: TextStyle(color: Color(0xFFD4AF37))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Bridge assets between different blockchains', style: TextStyle(color: Colors.white)),
+            Text('Bridge assets between different blockchains', style: TextStyle(color: Colors.white)),
             const SizedBox(height: 16),
             _buildNetworkSelector('From Network', 'Ethereum'),
             const SizedBox(height: 12),
@@ -2163,7 +3370,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
               style: TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
-            const Text('🔒 Secure cross-chain bridge with TydChronos protection', style: TextStyle(color: Colors.green, fontSize: 12)),
+            Text('🔒 Secure cross-chain bridge with TydChronos protection', style: TextStyle(color: Colors.green, fontSize: 12)),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
@@ -2175,7 +3382,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   ),
                 );
               },
-              child: const Text('Start Bridge'),
+              child: Text('Start Bridge'),
             ),
           ],
         ),
@@ -2189,11 +3396,11 @@ class _CryptoScreenState extends State<CryptoScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Buy Crypto', style: TextStyle(color: Color(0xFFD4AF37))),
+        title: Text('Buy Crypto', style: TextStyle(color: Color(0xFFD4AF37))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Purchase cryptocurrency with fiat', style: TextStyle(color: Colors.white)),
+            Text('Purchase cryptocurrency with fiat', style: TextStyle(color: Colors.white)),
             const SizedBox(height: 16),
             _buildAssetSelector('Select Asset', 'ETH'),
             const SizedBox(height: 12),
@@ -2205,9 +3412,9 @@ class _CryptoScreenState extends State<CryptoScreen> {
               style: TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 12),
-            const Text('Estimated: 0.033 ETH', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            Text('Estimated: 0.033 ETH', style: TextStyle(color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 16),
-            const Text('💳 Instant bank transfer available', style: TextStyle(color: Colors.blue, fontSize: 12)),
+            Text('💳 Instant bank transfer available', style: TextStyle(color: Colors.blue, fontSize: 12)),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
@@ -2219,7 +3426,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   ),
                 );
               },
-              child: const Text('Buy Now'),
+              child: Text('Buy Now'),
             ),
           ],
         ),
@@ -2233,11 +3440,11 @@ class _CryptoScreenState extends State<CryptoScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Sell Crypto', style: TextStyle(color: Color(0xFFD4AF37))),
+        title: Text('Sell Crypto', style: TextStyle(color: Color(0xFFD4AF37))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Sell cryptocurrency for fiat', style: TextStyle(color: Colors.white)),
+            Text('Sell cryptocurrency for fiat', style: TextStyle(color: Colors.white)),
             const SizedBox(height: 16),
             _buildAssetSelector('Select Asset', 'ETH'),
             const SizedBox(height: 12),
@@ -2249,9 +3456,9 @@ class _CryptoScreenState extends State<CryptoScreen> {
               style: TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 12),
-            const Text('Estimated: \$50.25 USD', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            Text('Estimated: \$50.25 USD', style: TextStyle(color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 16),
-            const Text('💰 Instant withdrawal to bank account', style: TextStyle(color: Colors.green, fontSize: 12)),
+            Text('💰 Instant withdrawal to bank account', style: TextStyle(color: Colors.green, fontSize: 12)),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
@@ -2263,7 +3470,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   ),
                 );
               },
-              child: const Text('Sell Now'),
+              child: Text('Sell Now'),
             ),
           ],
         ),
@@ -2277,7 +3484,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('QR Scanner', style: TextStyle(color: Color(0xFFD4AF37))),
+        title: Text('QR Scanner', style: TextStyle(color: Color(0xFFD4AF37))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -2290,7 +3497,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text('Scan QR code for addresses or payment requests', style: TextStyle(color: Colors.white)),
+            Text('Scan QR code for addresses or payment requests', style: TextStyle(color: Colors.white)),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
@@ -2302,7 +3509,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   ),
                 );
               },
-              child: const Text('Start Scanning'),
+              child: Text('Start Scanning'),
             ),
           ],
         ),
@@ -2379,7 +3586,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Send Crypto', style: TextStyle(color: Color(0xFFD4AF37))),
+        title: Text('Send Crypto', style: TextStyle(color: Color(0xFFD4AF37))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -2402,12 +3609,12 @@ class _CryptoScreenState extends State<CryptoScreen> {
               children: [
                 const Icon(Icons.security, color: Colors.green, size: 16),
                 const SizedBox(width: 5),
-                const Text('Enable volatility protection', style: TextStyle(color: Colors.green, fontSize: 12)),
+                Text('Enable volatility protection', style: TextStyle(color: Colors.green, fontSize: 12)),
                 const Spacer(),
                 Switch(
                   value: true,
                   onChanged: (value) {},
-                  thumbColor: MaterialStateProperty.all<Color?>(const Color(0xFFD4AF37)),
+                  thumbColor: WidgetStateProperty.all<Color?>(const Color(0xFFD4AF37)),
                 ),
               ],
             ),
@@ -2438,7 +3645,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   );
                 }
               },
-              child: const Text('Send with Protection'),
+              child: Text('Send with Protection'),
             ),
           ],
         ),
@@ -2451,12 +3658,12 @@ class _CryptoScreenState extends State<CryptoScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Receive Crypto', style: TextStyle(color: Color(0xFFD4AF37))),
+        title: Text('Receive Crypto', style: TextStyle(color: Color(0xFFD4AF37))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (ecosystem.ethereumAddress != null) ...[
-              const Text('Your TydChronos Address:', style: TextStyle(color: Colors.white)),
+              Text('Your TydChronos Address:', style: TextStyle(color: Colors.white)),
               const SizedBox(height: 10),
               SelectableText(
                 ecosystem.ethereumAddress!,
@@ -2478,29 +3685,28 @@ class _CryptoScreenState extends State<CryptoScreen> {
     );
   }
 
-  void _showSwapDialog(TydChronosEcosystemService ecosystem, NetworkModeManager networkMode, BuildContext context) {
+  void _showSwapDialog(TydChronosEcosystemService ecosystem, NetworkModeManager networkMode, BuildContext context, DAppIntegrationManager dappManager) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Swap Assets', style: TextStyle(color: Color(0xFFD4AF37))),
-        content: const Column(
+        title: Text('Swap Assets', style: TextStyle(color: Color(0xFFD4AF37))),
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Text('TydChronos DApp swap interface', style: TextStyle(color: Colors.white)),
             SizedBox(height: 10),
             Text('🔒 Volatility protection enabled', style: TextStyle(color: Colors.green, fontSize: 12)),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                _connectToDApp(context, dappManager, 'Uniswap V3');
+                Navigator.pop(context);
+              },
+              child: Text('Connect to Uniswap V3'),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              ecosystem.connectToTydChronosDApp();
-              Navigator.pop(context);
-            },
-            child: const Text('Connect to DApp', style: TextStyle(color: Color(0xFFD4AF37))),
-          ),
-        ],
       ),
     );
   }
@@ -2519,9 +3725,9 @@ class _CryptoScreenState extends State<CryptoScreen> {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                const Icon(Icons.smart_toy, size: 50, color: Color(0xFFD4AF37)),
-                const SizedBox(height: 10),
-                const Text(
+                Icon(Icons.smart_toy, size: 50, color: Color(0xFFD4AF37)),
+                SizedBox(height: 10),
+                Text(
                   'TydChronos Snipping Bots',
                   style: TextStyle(
                     fontSize: 24,
@@ -2529,8 +3735,8 @@ class _CryptoScreenState extends State<CryptoScreen> {
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 10),
-                const Text(
+                SizedBox(height: 10),
+                Text(
                   'Advanced DeFi trading automation integrated with TydChronos Smart Contracts',
                   style: TextStyle(color: Colors.grey, fontSize: 14),
                   textAlign: TextAlign.center,
@@ -2549,7 +3755,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                const Text(
+                Text(
                   'AI Trading Performance',
                   style: TextStyle(
                     fontSize: 20,
@@ -2563,7 +3769,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                   children: [
                     Column(
                       children: [
-                        const Text('Total Trading Balance', style: TextStyle(color: Colors.grey)),
+                        Text('Total Trading Balance', style: TextStyle(color: Colors.grey)),
                         Text(
                           '${ecosystem.totalTradingBalance.toStringAsFixed(4)} ETH',
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -2572,7 +3778,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                     ),
                     Column(
                       children: [
-                        const Text('Total Profit', style: TextStyle(color: Colors.grey)),
+                        Text('Total Profit', style: TextStyle(color: Colors.grey)),
                         Text(
                           '${currencyManager.currencySymbol}${ecosystem.totalProfit.toStringAsFixed(2)}',
                           style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
@@ -2581,7 +3787,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                     ),
                     Column(
                       children: [
-                        const Text('Total Success Rate', style: TextStyle(color: Colors.grey)),
+                        Text('Total Success Rate', style: TextStyle(color: Colors.grey)),
                         Text(
                           '${ecosystem.totalSuccessRate.toStringAsFixed(1)}%',
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -2596,7 +3802,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                     Expanded(
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.account_balance_wallet),
-                        label: const Text('Send Profits to Crypto'),
+                        label: Text('Send Profits to Crypto'),
                         onPressed: () {
                           ecosystem.sendProfitsToCryptoWallet();
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -2616,7 +3822,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                     Expanded(
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.arrow_forward),
-                        label: const Text('Send ETH to Crypto'),
+                        label: Text('Send ETH to Crypto'),
                         onPressed: () {
                           _showSendToCryptoWalletDialog(context, ecosystem);
                         },
@@ -2682,7 +3888,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
             padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                const Text(
+                Text(
                   'Bot Performance Analytics',
                   style: TextStyle(
                     fontSize: 20,
@@ -2730,11 +3936,11 @@ class _CryptoScreenState extends State<CryptoScreen> {
         builder: (context, setState) {
           return AlertDialog(
             backgroundColor: Colors.grey[900],
-            title: const Text('Send ETH to Crypto Wallet', style: TextStyle(color: Color(0xFFD4AF37))),
+            title: Text('Send ETH to Crypto Wallet', style: TextStyle(color: Color(0xFFD4AF37))),
             content: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text('Transfer ETH from trading balance to your crypto wallet', style: TextStyle(color: Colors.white)),
+                Text('Transfer ETH from trading balance to your crypto wallet', style: TextStyle(color: Colors.white)),
                 const SizedBox(height: 16),
                 Text('Available Trading Balance: ${totalTradingBalance.toStringAsFixed(4)} ETH', 
                   style: const TextStyle(color: Colors.green, fontSize: 14)),
@@ -2744,7 +3950,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                     labelText: 'ETH Amount',
                     labelStyle: const TextStyle(color: Colors.grey),
                     suffixIcon: IconButton(
-                      icon: const Text('MAX', style: TextStyle(color: Color(0xFFD4AF37), fontSize: 12)),
+                      icon: Text('MAX', style: TextStyle(color: Color(0xFFD4AF37), fontSize: 12)),
                       onPressed: () {
                         setState(() {
                           amount = totalTradingBalance;
@@ -2761,9 +3967,9 @@ class _CryptoScreenState extends State<CryptoScreen> {
                 ),
                 const SizedBox(height: 12),
                 if (amount > totalTradingBalance)
-                  const Text('Insufficient balance!', style: TextStyle(color: Colors.red, fontSize: 12)),
+                  Text('Insufficient balance!', style: TextStyle(color: Colors.red, fontSize: 12)),
                 const SizedBox(height: 16),
-                const Text('💸 Transfer from trading bots to main wallet', style: TextStyle(color: Colors.green, fontSize: 12)),
+                Text('💸 Transfer from trading bots to main wallet', style: TextStyle(color: Colors.green, fontSize: 12)),
                 const SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: amount > 0 && amount <= totalTradingBalance ? () async {
@@ -2887,7 +4093,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
               children: [
                 Column(
                   children: [
-                    const Text('Trading Balance', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text('Trading Balance', style: TextStyle(color: Colors.grey, fontSize: 12)),
                     Text(
                       '${performance['tradingBalance']} ETH',
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -2896,7 +4102,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                 ),
                 Column(
                   children: [
-                    const Text('Profit', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text('Profit', style: TextStyle(color: Colors.grey, fontSize: 12)),
                     Text(
                       '${currencyManager.currencySymbol}${performance['profit']}',
                       style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
@@ -2905,7 +4111,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
                 ),
                 Column(
                   children: [
-                    const Text('Success Rate', style: TextStyle(color: Colors.grey, fontSize: 12)),
+                    Text('Success Rate', style: TextStyle(color: Colors.grey, fontSize: 12)),
                     Text(
                       '${performance['successRate']}%',
                       style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
@@ -2998,7 +4204,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
+            child: Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
           ),
         ],
       ),
@@ -3015,7 +4221,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
+            child: Text('OK', style: TextStyle(color: Color(0xFFD4AF37))),
           ),
         ],
       ),
@@ -3033,7 +4239,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'Select Network',
                 style: TextStyle(
                   color: Color(0xFFD4AF37),
@@ -3078,7 +4284,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
+              Text(
                 'Select Currency',
                 style: TextStyle(
                   color: Color(0xFFD4AF37),
@@ -3113,7 +4319,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text(
+        title: Text(
           'Your TydChronos Address',
           style: TextStyle(color: Color(0xFFD4AF37)),
         ),
@@ -3170,7 +4376,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
+            Text(
               'Scan QR code or copy address to receive funds',
               style: TextStyle(color: Colors.grey, fontSize: 12),
               textAlign: TextAlign.center,
@@ -3180,7 +4386,7 @@ class _CryptoScreenState extends State<CryptoScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close', style: TextStyle(color: Color(0xFFD4AF37))),
+            child: Text('Close', style: TextStyle(color: Color(0xFFD4AF37))),
           ),
         ],
       ),
@@ -3211,7 +4417,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
         backgroundColor: Colors.black,
         foregroundColor: const Color(0xFFD4AF37),
         elevation: 0,
-        title: const Text(
+        title: Text(
           'E-WALLET',
           style: TextStyle(
             color: Color(0xFFD4AF37),
@@ -3255,11 +4461,11 @@ class _EWalletScreenState extends State<EWalletScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Transfer TydChronos Wallet', style: TextStyle(color: Color(0xFFD4AF37))),
+        title: Text('Transfer TydChronos Wallet', style: TextStyle(color: Color(0xFFD4AF37))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Transfer fiat funds to another TydChronos Wallet', style: TextStyle(color: Colors.white)),
+            Text('Transfer fiat funds to another TydChronos Wallet', style: TextStyle(color: Colors.white)),
             const SizedBox(height: 16),
             const TextField(
               decoration: InputDecoration(
@@ -3277,9 +4483,9 @@ class _EWalletScreenState extends State<EWalletScreen> {
               style: TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 12),
-            const Text('Transfer Type: External TydChronos Wallet', style: TextStyle(color: Colors.grey, fontSize: 12)),
+            Text('Transfer Type: External TydChronos Wallet', style: TextStyle(color: Colors.grey, fontSize: 12)),
             const SizedBox(height: 16),
-            const Text('🔒 Secure transfer with TydChronos protection', style: TextStyle(color: Colors.green, fontSize: 12)),
+            Text('🔒 Secure transfer with TydChronos protection', style: TextStyle(color: Colors.green, fontSize: 12)),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
@@ -3291,7 +4497,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
                   ),
                 );
               },
-              child: const Text('Transfer Now'),
+              child: Text('Transfer Now'),
             ),
           ],
         ),
@@ -3314,7 +4520,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
                 padding: const EdgeInsets.all(20),
                 child: Column(
                   children: [
-                    const Text('Available Balance', style: TextStyle(color: Colors.grey)),
+                    Text('Available Balance', style: TextStyle(color: Colors.grey)),
                     const SizedBox(height: 8),
                     Text(
                       balanceManager.formatBalance(widget.fiatWallet.balance, symbol: currencyManager.currencySymbol),
@@ -3372,7 +4578,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: const Text(
+                child: Text(
                   'Recent Transactions',
                   style: TextStyle(
                     color: Colors.white,
@@ -3465,11 +4671,11 @@ class _EWalletScreenState extends State<EWalletScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Withdraw Funds', style: TextStyle(color: Color(0xFFD4AF37))),
+        title: Text('Withdraw Funds', style: TextStyle(color: Color(0xFFD4AF37))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Withdraw funds to your bank account', style: TextStyle(color: Colors.white)),
+            Text('Withdraw funds to your bank account', style: TextStyle(color: Colors.white)),
             const SizedBox(height: 16),
             const TextField(
               decoration: InputDecoration(
@@ -3487,7 +4693,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
               style: TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
-            const Text('💸 1-3 business days processing', style: TextStyle(color: Colors.blue, fontSize: 12)),
+            Text('💸 1-3 business days processing', style: TextStyle(color: Colors.blue, fontSize: 12)),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
@@ -3499,7 +4705,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
                   ),
                 );
               },
-              child: const Text('Withdraw Now'),
+              child: Text('Withdraw Now'),
             ),
           ],
         ),
@@ -3513,11 +4719,11 @@ class _EWalletScreenState extends State<EWalletScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: Colors.grey[900],
-        title: const Text('Transfer to Bank', style: TextStyle(color: Color(0xFFD4AF37))),
+        title: Text('Transfer to Bank', style: TextStyle(color: Color(0xFFD4AF37))),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Transfer funds to another bank account', style: TextStyle(color: Colors.white)),
+            Text('Transfer funds to another bank account', style: TextStyle(color: Colors.white)),
             const SizedBox(height: 16),
             const TextField(
               decoration: InputDecoration(
@@ -3543,7 +4749,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
               style: TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
-            const Text('🔒 Secure bank transfer', style: TextStyle(color: Colors.green, fontSize: 12)),
+            Text('🔒 Secure bank transfer', style: TextStyle(color: Colors.green, fontSize: 12)),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
@@ -3555,7 +4761,7 @@ class _EWalletScreenState extends State<EWalletScreen> {
                   ),
                 );
               },
-              child: const Text('Transfer Now'),
+              child: Text('Transfer Now'),
             ),
           ],
         ),
@@ -3702,13 +4908,14 @@ class SettingsSecurityScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currencyManager = Provider.of<CurrencyManager>(context);
+    final dappManager = Provider.of<DAppIntegrationManager>(context);
     
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'SETTINGS',
             style: TextStyle(
               color: Colors.white,
@@ -3726,7 +4933,7 @@ class SettingsSecurityScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Security',
                   style: TextStyle(
                     color: Color(0xFFD4AF37),
@@ -3752,7 +4959,7 @@ class SettingsSecurityScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'TydChronos Ecosystem',
                   style: TextStyle(
                     color: Color(0xFFD4AF37),
@@ -3761,10 +4968,11 @@ class SettingsSecurityScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                _buildSettingsItem('DApp Connection', 'Connected', Icons.link),
+                _buildSettingsItem('DApp Connection', dappManager.connectedDApp ?? 'Not Connected', Icons.link),
                 _buildSettingsItem('Smart Contracts', 'Active', Icons.code),
                 _buildSettingsItem('Snipping Bots', '3 Available', Icons.smart_toy),
                 _buildSettingsItem('Volatility Protection', 'Enabled', Icons.security),
+                _buildSettingsItem('Multi-Chain Support', '6 Networks', Icons.language),
               ],
             ),
           ),
@@ -3778,7 +4986,7 @@ class SettingsSecurityScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'App Settings',
                   style: TextStyle(
                     color: Color(0xFFD4AF37),
@@ -3790,6 +4998,32 @@ class SettingsSecurityScreen extends StatelessWidget {
                 _buildSettingsItem('Currency', currencyManager.selectedCurrency, Icons.currency_exchange),
                 _buildSettingsItem('Language', 'English', Icons.language),
                 _buildSettingsItem('Theme', 'Dark', Icons.dark_mode),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey[900],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'DApp Bridge Settings',
+                  style: TextStyle(
+                    color: Color(0xFFD4AF37),
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildSettingsItem('Current Network', dappManager.dappBridge.currentNetwork, Icons.network_check),
+                _buildSettingsItem('WalletConnect', 'Ready', Icons.qr_code),
+                _buildSettingsItem('WebSocket Status', 'Connected', Icons.wifi),
+                _buildSettingsItem('Supported Networks', '6', Icons.public),
               ],
             ),
           ),
@@ -3805,7 +5039,7 @@ class SettingsSecurityScreen extends StatelessWidget {
       trailing: Switch(
         value: isEnabled,
         onChanged: (value) {},
-        thumbColor: MaterialStateProperty.all<Color?>(const Color(0xFFD4AF37)),
+        thumbColor: WidgetStateProperty.all<Color?>(const Color(0xFFD4AF37)),
       ),
     );
   }
@@ -3852,7 +5086,7 @@ class AutomatedTradingScreen extends StatelessWidget {
         backgroundColor: Colors.black,
         foregroundColor: const Color(0xFFD4AF37),
         elevation: 0,
-        title: const Text(
+        title: Text(
           'AUTOMATED TRADING',
           style: TextStyle(
             color: Color(0xFFD4AF37),
@@ -3868,76 +5102,4 @@ class AutomatedTradingScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-// Add this import at the top
-
-// In your main widget, add connection handling:
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  final DAppBridgeService _dappBridge = DAppBridgeService();
-  bool _showConnectionDialog = false;
-
-  @override
-  void initState() {
-    DAppIntegrationSimple.initialize();
-     DAppIntegrationWrapper.initialize();
-    _dappBridge.addListener(_handleDAppStateChange);
-  }
-
-  void _handleDAppStateChange() {
-    setState(() {
-      _showConnectionDialog = _dappBridge.hasPendingConnection;
-    });
-    
-    if (_dappBridge.connectedDApp != null) {
-      // Show connected status in UI
-      _showSnackBar('Connected to ${_dappBridge.connectedDApp}');
-    }
-  }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message))
-    );
-  }
-
-  @override
-  
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      key: Key('home_scaffold'),
-      appBar: AppBar(
-        title: Text(widget.title),
-        backgroundColor: Colors.black,
-        foregroundColor: Color(0xFFFFD700),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'TydChronos Wallet',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {},
-              child: Text('Get Started'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
 }

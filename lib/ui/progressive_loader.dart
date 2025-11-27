@@ -22,20 +22,20 @@ class _ProgressiveLoaderState extends State<ProgressiveLoader> {
 
   void _simulateLoading() async {
     // Simulate the actual loading sequence
-    await Future.delayed(Duration(milliseconds: 100));
+    await Future.delayed(const Duration(milliseconds: 100));
     setState(() => _componentStatus['Basic UI'] = true);
     
-    await Future.delayed(Duration(milliseconds: 200));
+    await Future.delayed(const Duration(milliseconds: 200));
     setState(() => _componentStatus['Providers'] = true);
     
-    await Future.delayed(Duration(milliseconds: 150));
+    await Future.delayed(const Duration(milliseconds: 150));
     setState(() => _componentStatus['Assets'] = true);
     
-    await Future.delayed(Duration(milliseconds: 100));
+    await Future.delayed(const Duration(milliseconds: 100));
     setState(() => _componentStatus['Final Setup'] = true);
     
     // WalletConnect takes longest - show progress
-    await Future.delayed(Duration(milliseconds: 500));
+    await Future.delayed(const Duration(milliseconds: 500));
     setState(() => _componentStatus['WalletConnect'] = true);
   }
 
@@ -51,31 +51,31 @@ class _ProgressiveLoaderState extends State<ProgressiveLoader> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // App Logo
-            FlutterLogo(size: 80),
-            SizedBox(height: 30),
+            const FlutterLogo(size: 80),
+            const SizedBox(height: 30),
             
             // Progress indicator
-            CircularProgressIndicator(),
-            SizedBox(height: 20),
+            const CircularProgressIndicator(),
+            const SizedBox(height: 20),
             
             // Loading text
-            Text(
+            const Text(
               'Loading Chronos Wallet...',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             
             // Progress percentage
             Text(
               '${((loadedCount / totalCount) * 100).round()}%',
-              style: TextStyle(fontSize: 16, color: Colors.grey),
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
-            SizedBox(height: 30),
+            const SizedBox(height: 30),
             
             // Component status list
             ..._componentStatus.entries.map((entry) => 
               Padding(
-                padding: EdgeInsets.symmetric(vertical: 4),
+                padding: const EdgeInsets.symmetric(vertical: 4),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -84,7 +84,7 @@ class _ProgressiveLoaderState extends State<ProgressiveLoader> {
                       color: entry.value ? Colors.green : Colors.orange,
                       size: 16,
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Text(
                       entry.key,
                       style: TextStyle(

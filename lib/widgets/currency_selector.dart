@@ -6,10 +6,10 @@ class CurrencySelector extends StatefulWidget {
   final bool isCompact;
 
   const CurrencySelector({
-    Key? key,
+    super.key,
     this.onCurrencyChanged,
     this.isCompact = false,
-  }) : super(key: key);
+  });
 
   @override
   _CurrencySelectorState createState() => _CurrencySelectorState();
@@ -25,7 +25,7 @@ class _CurrencySelectorState extends State<CurrencySelector> {
   }
 
   Future<void> _loadSelectedCurrency() async {
-    final currency = await CurrencyService.getSelectedCurrency();
+    final currency = await CurrencyService().getSelectedCurrency();
     setState(() {
       _selectedCurrency = currency;
     });
@@ -36,23 +36,23 @@ class _CurrencySelectorState extends State<CurrencySelector> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Select Currency'),
+          title: const Text('Select Currency'),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.builder(
               shrinkWrap: true,
-              itemCount: CurrencyService.currencySymbols.keys.length,
+              itemCount: CurrencyService().CurrencyManager.currencySymbols.keys.length,
               itemBuilder: (context, index) {
-                final currencyCode = CurrencyService.currencySymbols.keys.elementAt(index);
+                final currencyCode = CurrencyService().CurrencyManager.currencySymbols.keys.elementAt(index);
                 return ListTile(
                   leading: Text(
-                    CurrencyService.getCurrencySymbol(currencyCode),
-                    style: TextStyle(fontSize: 20),
+                    CurrencyService().getCurrencySymbol(currencyCode),
+                    style: const TextStyle(fontSize: 20),
                   ),
-                  title: Text(CurrencyService.getCurrencyName(currencyCode)),
+                  title: Text(CurrencyService().getCurrencyName(currencyCode)),
                   subtitle: Text(currencyCode),
                   trailing: currencyCode == _selectedCurrency
-                      ? Icon(Icons.check, color: Colors.green)
+                      ? const Icon(Icons.check, color: Colors.green)
                       : null,
                   onTap: () {
                     _selectCurrency(currencyCode);
@@ -68,7 +68,7 @@ class _CurrencySelectorState extends State<CurrencySelector> {
   }
 
   Future<void> _selectCurrency(String currencyCode) async {
-    await CurrencyService.setSelectedCurrency(currencyCode);
+    await CurrencyService().setSelectedCurrency(currencyCode);
     setState(() {
       _selectedCurrency = currencyCode;
     });
@@ -83,10 +83,10 @@ class _CurrencySelectorState extends State<CurrencySelector> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              CurrencyService.getCurrencySymbol(_selectedCurrency),
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              CurrencyService().getCurrencySymbol(_selectedCurrency),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            Icon(Icons.arrow_drop_down, size: 16),
+            const Icon(Icons.arrow_drop_down, size: 16),
           ],
         ),
         onPressed: _showCurrencyDialog,
@@ -96,10 +96,10 @@ class _CurrencySelectorState extends State<CurrencySelector> {
 
     return OutlinedButton.icon(
       icon: Text(
-        CurrencyService.getCurrencySymbol(_selectedCurrency),
-        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        CurrencyService().getCurrencySymbol(_selectedCurrency),
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
       ),
-      label: Icon(Icons.arrow_drop_down),
+      label: const Icon(Icons.arrow_drop_down),
       onPressed: _showCurrencyDialog,
     );
   }

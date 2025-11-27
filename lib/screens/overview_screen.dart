@@ -9,10 +9,10 @@ class OverviewScreen extends StatefulWidget {
 
 class _OverviewScreenState extends State<OverviewScreen> {
   String _selectedCurrency = 'USD';
-  double _totalNetWorth = 12500.00;
-  double _cryptoBalance = 8500.00;
-  double _bankingBalance = 4000.00;
-  double _tradingBalance = 2500.00;
+  final double _totalNetWorth = 12500.00;
+  final double _cryptoBalance = 8500.00;
+  final double _bankingBalance = 4000.00;
+  final double _tradingBalance = 2500.00;
 
   @override
   void initState() {
@@ -21,7 +21,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
   }
 
   Future<void> _loadSelectedCurrency() async {
-    final currency = await CurrencyService.getSelectedCurrency();
+    final currency = await CurrencyService().getSelectedCurrency();
     setState(() {
       _selectedCurrency = currency;
     });
@@ -37,7 +37,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('TydChronos Wallet'),
+        title: const Text('TydChronos Wallet'),
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         actions: [
@@ -45,11 +45,11 @@ class _OverviewScreenState extends State<OverviewScreen> {
             isCompact: true,
             onCurrencyChanged: _onCurrencyChanged,
           ),
-          SizedBox(width: 8),
+          const SizedBox(width: 8),
         ],
       ),
       body: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -57,7 +57,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
             Card(
               elevation: 4,
               child: Padding(
-                padding: EdgeInsets.all(16.0),
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -68,10 +68,10 @@ class _OverviewScreenState extends State<OverviewScreen> {
                         color: Colors.grey[600],
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
-                      CurrencyService.formatCurrency(_totalNetWorth, _selectedCurrency),
-                      style: TextStyle(
+                      CurrencyService().formatCurrency(_totalNetWorth, _selectedCurrency),
+                      style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         color: Colors.green,
@@ -81,7 +81,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 ),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             
             // Balances Grid
             Row(
@@ -93,7 +93,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                     Colors.blue,
                   ),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Expanded(
                   child: _buildBalanceCard(
                     'Banking Balance',
@@ -103,7 +103,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 ),
               ],
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
@@ -113,7 +113,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
                     Colors.orange,
                   ),
                 ),
-                SizedBox(width: 8),
+                const SizedBox(width: 8),
                 Expanded(
                   child: _buildBalanceCard(
                     'Multi-Chain Assets',
@@ -124,15 +124,15 @@ class _OverviewScreenState extends State<OverviewScreen> {
               ],
             ),
             
-            SizedBox(height: 24),
-            Text(
+            const SizedBox(height: 24),
+            const Text(
               'Recent Activity',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Expanded(
               child: ListView(
                 children: [
@@ -153,7 +153,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
     return Card(
       elevation: 2,
       child: Padding(
-        padding: EdgeInsets.all(12.0),
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -164,9 +164,9 @@ class _OverviewScreenState extends State<OverviewScreen> {
                 color: Colors.grey[600],
               ),
             ),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text(
-              CurrencyService.formatCurrency(amount, _selectedCurrency),
+              CurrencyService().formatCurrency(amount, _selectedCurrency),
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -181,7 +181,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
 
   Widget _buildTransactionItem(String description, String amount, Color color) {
     return Card(
-      margin: EdgeInsets.symmetric(vertical: 4),
+      margin: const EdgeInsets.symmetric(vertical: 4),
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: color.withOpacity(0.2),
@@ -192,7 +192,7 @@ class _OverviewScreenState extends State<OverviewScreen> {
           ),
         ),
         title: Text(description),
-        subtitle: Text('2 hours ago'),
+        subtitle: const Text('2 hours ago'),
         trailing: Text(
           amount,
           style: TextStyle(

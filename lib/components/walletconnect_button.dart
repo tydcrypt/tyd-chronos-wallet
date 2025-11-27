@@ -97,9 +97,9 @@ class WalletConnectButton extends StatelessWidget {
               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            Text(
+            const Text(
               'Address:',
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
+              style: TextStyle(color: Colors.grey, fontSize: 12),
             ),
             SelectableText(
               info['address'] ?? 'No address',

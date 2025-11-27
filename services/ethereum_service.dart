@@ -1,9 +1,7 @@
 // Ethereum Blockchain Service
 // Handles Ethereum network interactions, smart contracts, and wallet operations
 
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 // import 'package:web3dart/web3dart.dart'; // Uncomment when web3dart is added
 
 class EthereumService with ChangeNotifier {
@@ -40,13 +38,13 @@ class EthereumService with ChangeNotifier {
   
   Future<double> getBalance(String address) async {
     // TODO: Implement real balance checking
-    await Future.delayed(Duration(seconds: 1)); // Simulate API call
+    await Future.delayed(const Duration(seconds: 1)); // Simulate API call
     return _ethBalance;
   }
   
   Future<String> sendTransaction(String to, double amount) async {
     // TODO: Implement real transaction sending
-    await Future.delayed(Duration(seconds: 2)); // Simulate transaction
+    await Future.delayed(const Duration(seconds: 2)); // Simulate transaction
     final txHash = '0x${List.generate(64, (i) => i.toRadixString(16)).join()}';
     _ethBalance -= amount;
     notifyListeners();
@@ -55,7 +53,7 @@ class EthereumService with ChangeNotifier {
   
   Future<void> connectWallet() async {
     // TODO: Implement real wallet connection
-    await Future.delayed(Duration(seconds: 2));
+    await Future.delayed(const Duration(seconds: 2));
     _isConnected = true;
     notifyListeners();
   }

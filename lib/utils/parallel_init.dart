@@ -1,5 +1,4 @@
 import '../services/optimized_walletconnect_service.dart';
-import 'simple_performance_monitor.dart';
 
 Future<void> initializeComponents() async {
   print('[INFO] Starting OPTIMIZED parallel component initialization...');
